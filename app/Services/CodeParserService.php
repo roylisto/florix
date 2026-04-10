@@ -43,12 +43,15 @@ class CodeParserService
         
         if ($onProgress) $onProgress("Scanning routes...");
         $routes = $this->parseRoutes($basePath);
+        if ($onProgress) $onProgress("Found " . count($routes) . " routes.");
         
         if ($onProgress) $onProgress("Scanning controllers...");
         $controllers = $this->parseControllers($basePath);
+        if ($onProgress) $onProgress("Found " . count($controllers) . " controllers.");
         
         if ($onProgress) $onProgress("Scanning models...");
         $models = $this->parseModels($basePath);
+        if ($onProgress) $onProgress("Found " . count($models) . " models.");
 
         return [
             'routes' => $routes,

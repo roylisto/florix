@@ -12,6 +12,7 @@ class Analysis extends Model
         'llm_output', 
         'status', 
         'progress_message',
+        'logs',
         'error', 
         'zip_path', 
         'extracted_path'

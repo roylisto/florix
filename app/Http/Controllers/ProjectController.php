@@ -102,4 +102,16 @@ class ProjectController extends Controller
 
         return back()->with('error', 'No active analysis to cancel.');
     }
+
+    public function status(Project $project)
+    {
+        $analysis = $project->latestAnalysis;
+
+        return response()->json([
+            'status' => $analysis?->status ?? 'pending',
+            'progress_message' => $analysis?->progress_message ?? '',
+            'logs' => $analysis?->logs ?? '',
+            'error' => $analysis?->error ?? null,
+        ]);
+    }
 }

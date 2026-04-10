@@ -11,10 +11,11 @@ class LLMService
      * Send a prompt to the local Ollama instance.
      *
      * @param string $prompt
+     * @param callable|null $onProgress
      * @return string
      * @throws \Exception
      */
-    public function generate(string $prompt): string
+    public function generate(string $prompt, ?callable $onProgress = null): string
     {
         $url = config('services.ollama.url', 'http://localhost:11434/api/generate');
         $model = config('services.ollama.model', 'mistral');
@@ -29,8 +30,8 @@ class LLMService
             $startTime = microtime(true);
 
             $fullResponse = '';
-            // Use a longer timeout for the initial connection and the stream
-            $response = Http::timeout(600)
+            // Use a 30-minute timeout for the initial connection and the stream
+            $response = Http::timeout(1800)
                 ->withOptions([
                     'stream' => true,
                     'connect_timeout' => 60, // 1 minute to just connect
@@ -39,16 +40,22 @@ class LLMService
                     'model' => $model,
                     'prompt' => $prompt,
                     'stream' => true,
+                    'options' => [
+                        'num_predict' => 2000, // Limit generation to avoid runaway loops
+                        'temperature' => 0.1,  // Keep it deterministic
+                    ]
                 ]);
 
             if ($response->failed()) {
                 Log::error('LLMService error: ' . $response->status() . ' - ' . $response->body());
-                throw new \Exception('Ollama request failed: ' . $response->status());
+                throw new \Exception('Ollama request failed with status ' . $response->status());
             }
 
             Log::info("LLMService: Headers received from Ollama. Starting to read stream...");
             $body = $response->toPsrResponse()->getBody();
             $chunkCount = 0;
+            $lastProgressUpdate = microtime(true);
+
             while (!$body->eof()) {
                 $line = $this->readLine($body);
                 if (empty($line)) continue;
@@ -57,7 +64,14 @@ class LLMService
                 if (isset($data['response'])) {
                     $fullResponse .= $data['response'];
                     $chunkCount++;
-                    if ($chunkCount === 1 || $chunkCount % 20 === 0) {
+
+                    // Provide progress updates every 20 tokens or every 5 seconds
+                    if ($onProgress && ($chunkCount % 20 === 0 || (microtime(true) - $lastProgressUpdate) > 5)) {
+                        $onProgress("Received " . $chunkCount . " tokens...");
+                        $lastProgressUpdate = microtime(true);
+                    }
+                    
+                    if ($chunkCount === 1 || $chunkCount % 100 === 0) {
                         Log::debug("LLMService: Received {$chunkCount} tokens...");
                     }
                 }

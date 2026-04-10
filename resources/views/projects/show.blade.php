@@ -5,7 +5,7 @@
         <div class="mb-8 flex items-center justify-between">
             <h1 class="text-3xl font-bold text-gray-900">{{ $project->name }}</h1>
             <div class="flex items-center space-x-4">
-                <span
+                <span id="status-badge"
                     class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                 @if ($analysis?->status === 'completed') bg-green-100 text-green-800
                 @elseif($analysis?->status === 'processing' || $analysis?->status === 'generating_explanation') bg-blue-100 text-blue-800
@@ -23,17 +23,17 @@
             $analysis?->status === 'pending' ||
                 $analysis?->status === 'processing' ||
                 $analysis?->status === 'generating_explanation')
-            <div class="bg-white rounded-xl shadow-md p-12 text-center">
+            <div id="processing-view" class="bg-white rounded-xl shadow-md p-12 text-center">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mb-4">
                 </div>
-                <h2 class="text-xl font-bold text-gray-800 mb-2">
+                <h2 id="processing-title" class="text-xl font-bold text-gray-800 mb-2">
                     @if ($analysis?->status === 'generating_explanation')
                         Generating AI Explanation...
                     @else
                         Analyzing Repository...
                     @endif
                 </h2>
-                <p class="text-gray-500">
+                <p id="processing-description" class="text-gray-500">
                     @if ($analysis?->status === 'generating_explanation')
                         The AI is now processing the parsed data to generate a business-friendly explanation. This step can
                         take a few minutes depending on the repository size.
@@ -42,19 +42,30 @@
                     @endif
                 </p>
 
-                @if ($analysis?->progress_message)
-                    <div class="mt-4 flex items-center justify-center space-x-2">
-                        <div class="flex space-x-1">
-                            <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0s">
-                            </div>
-                            <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s">
-                            </div>
-                            <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.4s">
-                            </div>
+                <div id="progress-container" class="mt-4 {{ $analysis?->progress_message ? '' : 'hidden' }} flex items-center justify-center space-x-2">
+                    <div class="flex space-x-1">
+                        <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0s">
                         </div>
-                        <span class="text-sm font-medium text-green-700 italic">{{ $analysis->progress_message }}</span>
+                        <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s">
+                        </div>
+                        <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.4s">
+                        </div>
                     </div>
-                @endif
+                    <span id="progress-message" class="text-sm font-medium text-green-700 italic">{{ $analysis?->progress_message }}</span>
+                </div>
+
+                <!-- Real-time Logs -->
+                <div class="mt-8 text-left">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                        <svg class="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Detailed Logs
+                    </h3>
+                    <pre id="realtime-logs" 
+                         class="bg-gray-900 text-gray-300 p-4 rounded-lg text-xs font-mono overflow-auto max-h-64 border border-gray-800">{{ $analysis?->logs ?? 'Waiting for logs...' }}</pre>
+                </div>
+
                 <div class="mt-8">
                     <form action="{{ route('projects.cancel', $project) }}" method="POST">
                         @csrf
@@ -65,10 +76,69 @@
                         </button>
                     </form>
                 </div>
+                
                 <script>
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 5000);
+                    function updateStatus() {
+                        fetch('{{ route('projects.status', $project) }}')
+                            .then(response => response.json())
+                            .then(data => {
+                                // Update status badge
+                                const badge = document.getElementById('status-badge');
+                                badge.innerText = data.status.charAt(0).toUpperCase() + data.status.slice(1).replace('_', ' ');
+                                
+                                // Update badge colors
+                                badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ';
+                                if (data.status === 'completed') badge.classList.add('bg-green-100', 'text-green-800');
+                                else if (data.status === 'processing' || data.status === 'generating_explanation') badge.classList.add('bg-blue-100', 'text-blue-800');
+                                else if (data.status === 'failed') badge.classList.add('bg-red-100', 'text-red-800');
+                                else badge.classList.add('bg-gray-100', 'text-gray-800');
+
+                                // If completed or failed, refresh page to show results/error
+                                if (data.status === 'completed' || data.status === 'failed') {
+                                    window.location.reload();
+                                    return;
+                                }
+
+                                // Update progress message
+                                const progressContainer = document.getElementById('progress-container');
+                                const progressMessage = document.getElementById('progress-message');
+                                if (data.progress_message) {
+                                    progressContainer.classList.remove('hidden');
+                                    progressMessage.innerText = data.progress_message;
+                                }
+
+                                // Update logs
+                                const logsPre = document.getElementById('realtime-logs');
+                                if (data.logs) {
+                                    const shouldScroll = logsPre.scrollTop + logsPre.clientHeight === logsPre.scrollHeight;
+                                    logsPre.innerText = data.logs;
+                                    if (shouldScroll) {
+                                        logsPre.scrollTop = logsPre.scrollHeight;
+                                    }
+                                }
+
+                                // Update title/description based on status
+                                const title = document.getElementById('processing-title');
+                                const desc = document.getElementById('processing-description');
+                                if (data.status === 'generating_explanation') {
+                                    title.innerText = 'Generating AI Explanation...';
+                                    desc.innerText = 'The AI is now processing the parsed data to generate a business-friendly explanation. This step can take a few minutes depending on the repository size.';
+                                }
+
+                                // Poll again in 2 seconds
+                                setTimeout(updateStatus, 2000);
+                            })
+                            .catch(error => {
+                                console.error('Error fetching status:', error);
+                                setTimeout(updateStatus, 5000);
+                            });
+                    }
+
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const logsPre = document.getElementById('realtime-logs');
+                        if (logsPre) logsPre.scrollTop = logsPre.scrollHeight;
+                        setTimeout(updateStatus, 2000);
+                    });
                 </script>
             </div>
         @elseif($analysis?->status === 'failed')

@@ -21,7 +21,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
      *
      * @var int
      */
-    public $timeout = 600; // 10 minutes
+    public $timeout = 1800; // 30 minutes
 
     public Project $project;
     public Analysis $analysis;
@@ -48,19 +48,21 @@ class AnalyzeRepositoryJob implements ShouldQueue
             'status' => 'processing',
             'zip_path' => $this->zipPath,
         ]);
+        $this->logStep('Starting repository analysis...');
+
         $tempDir = storage_path('app/temp/' . uniqid('repo_'));
 
         try {
             $basePath = $this->localPath ? $this->resolveHostPath($this->localPath) : null;
 
             if ($this->zipPath) {
-                Log::info('Worker trying to open ZIP at: ' . $this->zipPath . ' (Exists: ' . (File::exists($this->zipPath) ? 'Yes' : 'No') . ')');
+                $this->logStep('Opening ZIP at: ' . $this->zipPath);
                 $this->analysis->update(['progress_message' => 'Extracting repository...']);
                 File::makeDirectory($tempDir, 0755, true);
                 $zip = new ZipArchive();
                 $res = $zip->open($this->zipPath);
                 if ($res === true) {
-                    Log::info('Successfully opened ZIP. Extracting selected files to: ' . $tempDir);
+                    $this->logStep('Successfully opened ZIP. Extracting selected files to: ' . $tempDir);
 
                     // Instead of extractTo, we extract files individually to skip excluded dirs
                     for ($i = 0; $i < $zip->numFiles; $i++) {
@@ -79,12 +81,13 @@ class AnalyzeRepositoryJob implements ShouldQueue
                     $files = File::files($tempDir);
                     if (count($directories) === 1 && count($files) === 0) {
                         $basePath = $directories[0];
-                        Log::info("Detected single root directory in ZIP: {$basePath}");
+                        $this->logStep("Detected single root directory in ZIP: {$basePath}");
                     } else {
                         $basePath = $tempDir;
                     }
 
                     $this->analysis->update(['extracted_path' => $basePath]);
+                    $this->logStep('Extraction completed.');
                 } else {
                     throw new \Exception('Could not open ZIP file. Error code: ' . $res . ' (Path: ' . $this->zipPath . ')');
                 }
@@ -95,32 +98,44 @@ class AnalyzeRepositoryJob implements ShouldQueue
             }
 
             // Step 1: Parse code
-            Log::info('Step 1: Parsing code...');
+            $this->logStep('Step 1: Parsing code...');
             $parsedData = $parser->parse($basePath, function ($message) {
                 $this->analysis->update(['progress_message' => $message]);
+                $this->logStep('Parsing: ' . $message);
             });
             $this->analysis->update([
                 'parsed_data' => $parsedData,
                 'progress_message' => 'Code parsed successfully.'
             ]);
+            $this->logStep('Code parsed successfully. Total files: ' . (isset($parsedData['files']) ? count($parsedData['files']) : 0));
 
             // Step 2: Call LLM
-            Log::info('Step 2: Calling LLM for explanation...');
+            $this->logStep('Step 2: Calling LLM for explanation...');
             $this->analysis->update([
                 'status' => 'generating_explanation',
                 'progress_message' => 'AI is generating explanation...'
             ]);
             $prompt = $this->buildPrompt($parsedData);
-            $llmOutput = $llm->generate($prompt);
+
+            $this->logStep('LLM Prompt built. Character count: ' . strlen($prompt));
+            $this->logStep('Sending request to AI model...');
+
+            $llmOutput = $llm->generate($prompt, function ($message) {
+                $this->logStep('AI generating: ' . $message);
+            });
+
+            $this->logStep('AI response received. Output length: ' . strlen($llmOutput));
 
             // Step 3: Save results
-            Log::info('Step 3: Saving results...');
+            $this->logStep('Step 3: Saving results...');
             $this->analysis->update([
                 'llm_output' => $llmOutput,
                 'status' => 'completed',
                 'progress_message' => 'Analysis completed.'
             ]);
+            $this->logStep('Analysis completed successfully.');
         } catch (\Exception $e) {
+            $this->logStep('Analysis failed: ' . $e->getMessage());
             Log::error('Analysis failed: ' . $e->getMessage());
             $this->analysis->update([
                 'status' => 'failed',
@@ -129,6 +144,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
         } finally {
             // Clean up temp files
             if (File::exists($tempDir)) {
+                $this->logStep('Cleaning up temporary files...');
                 File::deleteDirectory($tempDir);
             }
 
@@ -141,9 +157,18 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 if (!$extractionSuccessful || $this->analysis->status === 'completed') {
                     File::delete($this->zipPath);
                     $this->analysis->update(['zip_path' => null]);
+                    $this->logStep('ZIP file cleaned up.');
                 }
             }
         }
+    }
+
+    protected function logStep(string $message): void
+    {
+        Log::info($message);
+        $this->analysis->update([
+            'logs' => ($this->analysis->logs ? $this->analysis->logs . "\n" : "") . "[" . now()->toDateTimeString() . "] " . $message
+        ]);
     }
 
     protected function resolveHostPath(string $path): ?string
