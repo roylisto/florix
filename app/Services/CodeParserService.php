@@ -34,15 +34,26 @@ class CodeParserService
      * Parse the repository at the given path.
      *
      * @param string $basePath
+     * @param callable|null $onProgress
      * @return array
      */
-    public function parse(string $basePath): array
+    public function parse(string $basePath, ?callable $onProgress = null): array
     {
         \Illuminate\Support\Facades\Log::info("CodeParserService: Starting parse of {$basePath}");
+        
+        if ($onProgress) $onProgress("Scanning routes...");
+        $routes = $this->parseRoutes($basePath);
+        
+        if ($onProgress) $onProgress("Scanning controllers...");
+        $controllers = $this->parseControllers($basePath);
+        
+        if ($onProgress) $onProgress("Scanning models...");
+        $models = $this->parseModels($basePath);
+
         return [
-            'routes' => $this->parseRoutes($basePath),
-            'controllers' => $this->parseControllers($basePath),
-            'models' => $this->parseModels($basePath),
+            'routes' => $routes,
+            'controllers' => $controllers,
+            'models' => $models,
         ];
     }
 

@@ -48,6 +48,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
             if ($this->zipPath) {
                 Log::info('Worker trying to open ZIP at: ' . $this->zipPath . ' (Exists: ' . (File::exists($this->zipPath) ? 'Yes' : 'No') . ')');
+                $this->analysis->update(['progress_message' => 'Extracting repository...']);
                 File::makeDirectory($tempDir, 0755, true);
                 $zip = new ZipArchive();
                 $res = $zip->open($this->zipPath);
@@ -68,12 +69,20 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
             // Step 1: Parse code
             Log::info('Step 1: Parsing code...');
-            $parsedData = $parser->parse($basePath);
-            $this->analysis->update(['parsed_data' => $parsedData]);
+            $parsedData = $parser->parse($basePath, function ($message) {
+                $this->analysis->update(['progress_message' => $message]);
+            });
+            $this->analysis->update([
+                'parsed_data' => $parsedData,
+                'progress_message' => 'Code parsed successfully.'
+            ]);
 
             // Step 2: Call LLM
             Log::info('Step 2: Calling LLM for explanation...');
-            $this->analysis->update(['status' => 'generating_explanation']);
+            $this->analysis->update([
+                'status' => 'generating_explanation',
+                'progress_message' => 'AI is generating explanation...'
+            ]);
             $prompt = $this->buildPrompt($parsedData);
             $llmOutput = $llm->generate($prompt);
 
@@ -82,6 +91,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
             $this->analysis->update([
                 'llm_output' => $llmOutput,
                 'status' => 'completed',
+                'progress_message' => 'Analysis completed.'
             ]);
         } catch (\Exception $e) {
             Log::error('Analysis failed: ' . $e->getMessage());

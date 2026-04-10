@@ -41,6 +41,20 @@
                         We are parsing your code and preparing it for AI analysis. This may take a minute.
                     @endif
                 </p>
+
+                @if ($analysis?->progress_message)
+                    <div class="mt-4 flex items-center justify-center space-x-2">
+                        <div class="flex space-x-1">
+                            <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0s">
+                            </div>
+                            <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s">
+                            </div>
+                            <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.4s">
+                            </div>
+                        </div>
+                        <span class="text-sm font-medium text-green-700 italic">{{ $analysis->progress_message }}</span>
+                    </div>
+                @endif
                 <div class="mt-8">
                     <form action="{{ route('projects.cancel', $project) }}" method="POST">
                         @csrf
