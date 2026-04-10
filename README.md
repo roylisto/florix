@@ -1,59 +1,90 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Florix - AI-Powered Repository Analyzer
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Florix is a code analysis tool designed to help developers and project managers understand their codebases through automated analysis and AI-driven insights. It provides a user-friendly interface to scan repositories and get a high-level overview of their functionality.
 
-## About Laravel
+## 🚀 Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Automated Code Parsing**: Scans Routes, Controllers, and Models to understand the application structure.
+- **Dependency Exclusion**: Automatically skips folders like `node_modules`, `vendor`, `.venv`, and other non-core directories to focus on your actual code.
+- **Flexible Input**: Supports analyzing repositories via ZIP file upload or by specifying a local directory path.
+- **Real-time Progress Tracking**: Live status updates in the UI during both the parsing and AI generation phases.
+- **AI-Driven Insights**: Uses local LLMs (via Ollama) to generate business-friendly explanations of what your code does.
+- **Visual User Flows**: Automatically generates Mermaid.js diagrams to visualize user interactions.
+- **Manual Control**: Includes a cancel button to stop stale or unwanted analysis processes.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🛠 Tech Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Framework**: Laravel 11.x
+- **Language**: PHP 8.2+
+- **Database**: SQLite
+- **AI Engine**: [Ollama](https://ollama.com/) (running `llama3.2:1b`)
+- **Cache/Queue**: Redis
+- **Infrastructure**: Docker & Docker Compose
+- **Web Server**: Nginx
 
-## Learning Laravel
+## 🏁 Getting Started
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Prerequisites
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Docker and Docker Compose
+- (Optional) PHP 8.2+ and Composer for local development
 
-## Laravel Sponsors
+### Installation
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+1. **Clone the repository**:
 
-### Premium Partners
+    ```bash
+    git clone <repository-url>
+    cd florix
+    ```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+2. **Setup environment**:
 
-## Contributing
+    ```bash
+    cp .env.example .env
+    ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+3. **Start the environment**:
 
-## Code of Conduct
+    ```bash
+    docker compose up -d --build
+    ```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+4. **Install dependencies**:
 
-## Security Vulnerabilities
+    ```bash
+    docker exec florix-app composer install
+    ```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5. **Initialize application**:
 
-## License
+    ```bash
+    docker exec florix-app php artisan key:generate
+    ```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+6. **Run migrations**:
+    ```bash
+    docker exec florix-app php artisan migrate
+    ```
+
+## 📖 Usage
+
+1. Open your browser and navigate to `http://localhost:8000`.
+2. **Add a Project**: Provide a project name and choose between:
+    - **ZIP Upload**: Upload a compressed version of your repository.
+    - **Local Path**: Specify a path on your machine (must be accessible by the Docker container).
+3. **Monitor Progress**: Watch the live status updates as the system extracts, parses, and analyzes your code.
+4. **View Report**: Once completed, explore the "Features", "User Flows", and "Mermaid Diagrams" generated by the AI.
+
+## ⚙️ Configuration
+
+- **Ollama Model**: By default, Florix uses `llama3.2:1b` for its balance of speed and accuracy. You can change this in your `.env` file via `OLLAMA_MODEL`.
+- **Resource Limits**: Ensure your Docker engine has at least 4GB of RAM allocated to allow the LLM to run smoothly.
+
+## 🤝 Contribution
+
+Feel free to open issues or submit pull requests for improvements.
+
+## 📄 License
+
+The Florix tool is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

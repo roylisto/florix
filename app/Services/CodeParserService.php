@@ -63,7 +63,7 @@ class CodeParserService
      * @param string $path
      * @return bool
      */
-    protected function isExcluded(string $path): bool
+    public function isExcluded(string $path): bool
     {
         // Normalize path to use forward slashes for consistent checking
         $normalizedPath = str_replace(DIRECTORY_SEPARATOR, '/', $path);

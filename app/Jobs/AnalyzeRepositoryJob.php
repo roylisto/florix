@@ -16,6 +16,13 @@ class AnalyzeRepositoryJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600; // 10 minutes
+
     public Project $project;
     public Analysis $analysis;
     public ?string $zipPath;
@@ -53,11 +60,31 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 $zip = new ZipArchive();
                 $res = $zip->open($this->zipPath);
                 if ($res === true) {
-                    Log::info('Successfully opened ZIP. Extracting to: ' . $tempDir);
-                    $zip->extractTo($tempDir);
+                    Log::info('Successfully opened ZIP. Extracting selected files to: ' . $tempDir);
+
+                    // Instead of extractTo, we extract files individually to skip excluded dirs
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $filename = $zip->getNameIndex($i);
+
+                        // Use the same exclusion logic as CodeParserService
+                        if (!$parser->isExcluded($filename)) {
+                            $zip->extractTo($tempDir, $filename);
+                        }
+                    }
+
                     $zip->close();
-                    $basePath = $tempDir;
-                    $this->analysis->update(['extracted_path' => $tempDir]);
+
+                    // Fix: If the ZIP contains a single root directory, use that as the base path
+                    $directories = File::directories($tempDir);
+                    $files = File::files($tempDir);
+                    if (count($directories) === 1 && count($files) === 0) {
+                        $basePath = $directories[0];
+                        Log::info("Detected single root directory in ZIP: {$basePath}");
+                    } else {
+                        $basePath = $tempDir;
+                    }
+
+                    $this->analysis->update(['extracted_path' => $basePath]);
                 } else {
                     throw new \Exception('Could not open ZIP file. Error code: ' . $res . ' (Path: ' . $this->zipPath . ')');
                 }

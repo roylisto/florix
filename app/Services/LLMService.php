@@ -29,8 +29,12 @@ class LLMService
             $startTime = microtime(true);
 
             $fullResponse = '';
-            $response = Http::timeout(300)
-                ->withOptions(['stream' => true])
+            // Use a longer timeout for the initial connection and the stream
+            $response = Http::timeout(600)
+                ->withOptions([
+                    'stream' => true,
+                    'connect_timeout' => 60, // 1 minute to just connect
+                ])
                 ->post($url, [
                     'model' => $model,
                     'prompt' => $prompt,
@@ -38,7 +42,7 @@ class LLMService
                 ]);
 
             if ($response->failed()) {
-                Log::error('LLMService error: ' . $response->status());
+                Log::error('LLMService error: ' . $response->status() . ' - ' . $response->body());
                 throw new \Exception('Ollama request failed: ' . $response->status());
             }
 

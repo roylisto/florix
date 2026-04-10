@@ -90,8 +90,17 @@
                 @if (!empty($logTail))
                     <div class="mb-6">
                         <h3 class="text-sm font-semibold text-gray-700 mb-2">Recent Logs (tail)</h3>
-                        <pre class="whitespace-pre-wrap bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto max-h-96">{{ $logTail }}</pre>
+                        <pre id="log-container"
+                            class="whitespace-pre-wrap bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-auto max-h-96">{{ $logTail }}</pre>
                     </div>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const container = document.getElementById('log-container');
+                            if (container) {
+                                container.scrollTop = container.scrollHeight;
+                            }
+                        });
+                    </script>
                 @endif
                 <div class="flex items-center justify-between">
                     <a href="{{ route('projects.index') }}"
