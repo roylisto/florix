@@ -1,0 +1,68 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: florix-app
+    volumes:
+      - .:/var/www
+      - ${HOME}:/hosthome:ro
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+    networks:
+      - florix-network
+    depends_on:
+      - redis
+      - ollama
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: florix-worker
+    command: php artisan queue:work
+    volumes:
+      - .:/var/www
+      - ${HOME}:/hosthome:ro
+    networks:
+      - florix-network
+    depends_on:
+      - redis
+      - ollama
+
+  web:
+    image: nginx:1.21
+    container_name: florix-web
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - florix-network
+    depends_on:
+      - app
+
+  redis:
+    image: redis:7-alpine
+    container_name: florix-redis
+    networks:
+      - florix-network
+
+  ollama:
+    image: ollama/ollama
+    container_name: florix-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - florix-network
+
+networks:
+  florix-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
