@@ -37,8 +37,8 @@ return [
 
     'ollama' => [
         'url' => env('OLLAMA_URL', 'http://localhost:11434/api/generate'),
-        'model' => env('OLLAMA_MODEL', 'llama3.2:1b'),
-        'mock' => env('OLLAMA_MOCK', true), // Default to true for testing
+        'model' => env('OLLAMA_MODEL', 'qwen2.5-coder:1.5b'),
+        'mock' => env('OLLAMA_MOCK', false), 
     ],
 
 ];

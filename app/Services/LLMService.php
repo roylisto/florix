@@ -41,8 +41,10 @@ class LLMService
                     'prompt' => $prompt,
                     'stream' => true,
                     'options' => [
-                        'num_predict' => 2000, // Limit generation to avoid runaway loops
+                        'num_predict' => 1500, // Reduced slightly for speed
                         'temperature' => 0.1,  // Keep it deterministic
+                        'num_ctx' => 4096,     // Ensure enough context for 50 files
+                        'top_k' => 20,         // Faster sampling
                     ]
                 ]);
 
