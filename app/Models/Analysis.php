@@ -13,6 +13,7 @@ class Analysis extends Model
         'status', 
         'progress_message',
         'logs',
+        'prompt',
         'error', 
         'zip_path', 
         'extracted_path'

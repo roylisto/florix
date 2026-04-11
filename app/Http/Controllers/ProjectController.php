@@ -111,6 +111,7 @@ class ProjectController extends Controller
             'status' => $analysis?->status ?? 'pending',
             'progress_message' => $analysis?->progress_message ?? '',
             'logs' => $analysis?->logs ?? '',
+            'prompt' => $analysis?->prompt ?? '',
             'error' => $analysis?->error ?? null,
         ]);
     }

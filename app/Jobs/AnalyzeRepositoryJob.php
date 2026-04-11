@@ -62,32 +62,35 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 $zip = new ZipArchive();
                 $res = $zip->open($this->zipPath);
                 if ($res === true) {
-                    $this->logStep('Successfully opened ZIP. Extracting selected files to: ' . $tempDir);
+                    $this->logStep('Successfully opened ZIP. Extracting all files to: ' . $tempDir);
 
-                    // Instead of extractTo, we extract files individually to skip excluded dirs
-                    for ($i = 0; $i < $zip->numFiles; $i++) {
-                        $filename = $zip->getNameIndex($i);
+                    // Extract all files - we will exclude them during the parsing phase instead
+                    $zip->extractTo($tempDir);
+                    $zip->close();
 
-                        // Use the same exclusion logic as CodeParserService
-                        if (!$parser->isExcluded($filename)) {
-                            $zip->extractTo($tempDir, $filename);
+                    // Better detection of the base path (handle single root directory)
+                    $basePath = $tempDir;
+                    $contents = File::allFiles($tempDir, true); // true for hidden files
+                    $directories = File::directories($tempDir);
+                    $files = File::files($tempDir);
+
+                    // If there's only one directory at the root and NO files (except maybe hidden ones like .DS_Store),
+                    // then that directory is our base path.
+                    if (count($directories) === 1) {
+                        $rootFolderName = basename($directories[0]);
+                        // Filter out common hidden files to see if the root is "clean"
+                        $visibleFiles = array_filter($files, function ($file) {
+                            return !str_starts_with($file->getFilename(), '.');
+                        });
+
+                        if (count($visibleFiles) === 0) {
+                            $basePath = $directories[0];
+                            $this->logStep("Detected single root directory in ZIP: {$rootFolderName}");
                         }
                     }
 
-                    $zip->close();
-
-                    // Fix: If the ZIP contains a single root directory, use that as the base path
-                    $directories = File::directories($tempDir);
-                    $files = File::files($tempDir);
-                    if (count($directories) === 1 && count($files) === 0) {
-                        $basePath = $directories[0];
-                        $this->logStep("Detected single root directory in ZIP: {$basePath}");
-                    } else {
-                        $basePath = $tempDir;
-                    }
-
                     $this->analysis->update(['extracted_path' => $basePath]);
-                    $this->logStep('Extraction completed.');
+                    $this->logStep('Extraction completed. Base path set to: ' . $basePath);
                 } else {
                     throw new \Exception('Could not open ZIP file. Error code: ' . $res . ' (Path: ' . $this->zipPath . ')');
                 }
@@ -107,7 +110,18 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 'parsed_data' => $parsedData,
                 'progress_message' => 'Code parsed successfully.'
             ]);
-            $this->logStep('Code parsed successfully. Total files: ' . (isset($parsedData['files']) ? count($parsedData['files']) : 0));
+            $totalFiles = $parsedData['total_files'] ?? 0;
+            $this->logStep('Code parsed successfully. Total source files found: ' . $totalFiles);
+
+            if ($totalFiles === 0) {
+                $this->logStep('No source files were found in the repository.');
+                $this->analysis->update([
+                    'llm_output' => "NO_DATA_FOUND: We couldn't find any source files in the provided path. Please ensure you uploaded a valid project with supported file extensions.",
+                    'status' => 'completed',
+                    'progress_message' => 'Analysis completed (no files found).'
+                ]);
+                return;
+            }
 
             // Step 2: Call LLM
             $this->logStep('Step 2: Calling LLM for explanation...');
@@ -116,6 +130,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 'progress_message' => 'AI is generating explanation...'
             ]);
             $prompt = $this->buildPrompt($parsedData);
+            $this->analysis->update(['prompt' => $prompt]);
 
             $this->logStep('LLM Prompt built. Character count: ' . strlen($prompt));
             $this->logStep('Sending request to AI model...');
@@ -196,29 +211,41 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
     protected function buildPrompt(array $parsedData): string
     {
-        $json = json_encode($parsedData, JSON_PRETTY_PRINT);
+        // Limit the structure to the first 50 files if there are too many, to avoid token limits
+        $structure = $parsedData['structure'] ?? [];
+        if (count($structure) > 50) {
+            $structure = array_slice($structure, 0, 50);
+        }
+
+        $json = json_encode(['total_files' => $parsedData['total_files'] ?? 0, 'structure' => $structure], JSON_PRETTY_PRINT);
 
         return <<<PROMPT
-You are a product manager explaining software to a non-technical client.
+You are a senior product manager and system architect. You are explaining a software project to a non-technical client.
+I have provided a JSON representation of the project's source code structure, including file paths, classes, methods, and code snippets.
+
 RULES:
-Do NOT mention code, controllers, APIs, or technical terms
-Use simple business language
-Focus on what the system does from user perspective
-INPUT:
+- Do NOT mention code, controllers, APIs, database tables, or technical jargon.
+- Use simple business language.
+- Focus on what the system does from a user perspective.
+- Infer the business purpose of the project based on the file names, class names, and method names provided.
+
+INPUT DATA (JSON):
 {$json}
-OUTPUT:
+
+OUTPUT FORMAT:
 FEATURES
-Bullet list of features
+- Bullet list of high-level features provided by this system.
+
 WHAT USER SEES
-Describe UI like dashboard, filters, tables
+- Describe the user interface (e.g., "A dashboard with statistics", "A customer management portal").
+
 USER FLOW
-Step-by-step:
-User opens X → System shows Y → User clicks → System updates
+- Step-by-step: User does X → System does Y → Outcome Z.
+
 MERMAID DIAGRAM
 graph TD
-A[User opens app] --> B[System shows dashboard]
-B --> C[User applies filter]
-C --> D[System updates data]
+A[User action] --> B[System response]
+B --> C[Further action]
 PROMPT;
     }
 }

@@ -31,6 +31,13 @@ class CodeParserService
     ];
 
     /**
+     * File extensions to scan.
+     *
+     * @var array
+     */
+    protected array $sourceExtensions = ['php', 'js', 'jsx', 'ts', 'tsx', 'py', 'go', 'rb', 'java'];
+
+    /**
      * Parse the repository at the given path.
      *
      * @param string $basePath
@@ -39,32 +46,95 @@ class CodeParserService
      */
     public function parse(string $basePath, ?callable $onProgress = null): array
     {
-        \Illuminate\Support\Facades\Log::info("CodeParserService: Starting parse of {$basePath}");
-        
-        if ($onProgress) $onProgress("Scanning routes...");
-        $routes = $this->parseRoutes($basePath);
-        if ($onProgress) $onProgress("Found " . count($routes) . " routes.");
-        
-        if ($onProgress) $onProgress("Scanning controllers...");
-        $controllers = $this->parseControllers($basePath);
-        if ($onProgress) $onProgress("Found " . count($controllers) . " controllers.");
-        
-        if ($onProgress) $onProgress("Scanning models...");
-        $models = $this->parseModels($basePath);
-        if ($onProgress) $onProgress("Found " . count($models) . " models.");
+        \Illuminate\Support\Facades\Log::info("CodeParserService: Starting generic parse of {$basePath}");
+
+        if ($onProgress) $onProgress("Scanning all source files...");
+
+        $files = File::allFiles($basePath);
+        $projectStructure = [];
+        $totalFiles = 0;
+
+        foreach ($files as $file) {
+            $relativePath = str_replace(rtrim($basePath, '/') . '/', '', $file->getRealPath());
+
+            if ($this->isExcluded($relativePath)) {
+                continue;
+            }
+
+            if (!in_array($file->getExtension(), $this->sourceExtensions)) {
+                continue;
+            }
+
+            $totalFiles++;
+            if ($totalFiles % 50 === 0 && $onProgress) {
+                $onProgress("Scanned {$totalFiles} files...");
+            }
+
+            $content = $file->getContents();
+            $filename = $file->getFilenameWithoutExtension();
+
+            // Basic structure extraction
+            $classes = $this->extractClasses($content);
+            $methods = $this->extractMethods($content);
+
+            $projectStructure[] = [
+                'path' => $relativePath,
+                'name' => $filename,
+                'extension' => $file->getExtension(),
+                'classes' => $classes,
+                'methods' => $methods,
+                // If it's a small file, we can include some context or top-level comments
+                'summary' => $this->extractSummary($content),
+            ];
+        }
+
+        if ($onProgress) $onProgress("Scan complete. Found {$totalFiles} source files.");
 
         return [
-            'routes' => $routes,
-            'controllers' => $controllers,
-            'models' => $models,
+            'total_files' => $totalFiles,
+            'structure' => $projectStructure,
+            // Keep empty arrays for backward compatibility if needed,
+            // but we'll update the prompt to use 'structure'
+            'routes' => [],
+            'controllers' => [],
+            'models' => [],
         ];
     }
 
     /**
+     * Extract class names from content.
+     */
+    protected function extractClasses(string $content): array
+    {
+        preg_match_all('/(?:class|interface|trait)\s+(\w+)/i', $content, $matches);
+        return array_unique($matches[1] ?? []);
+    }
+
+    /**
+     * Extract method/function names from content.
+     */
+    protected function extractMethods(string $content): array
+    {
+        // Matches "public function name(" or "function name(" or "const name = () =>" or "async function name("
+        preg_match_all('/(?:public|protected|private|static|async)?\s*function\s+(\w+)\s*\(|const\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/i', $content, $matches);
+
+        $methods = array_merge($matches[1] ?? [], $matches[2] ?? []);
+        return array_values(array_unique(array_filter($methods)));
+    }
+
+    /**
+     * Extract a brief summary or top-level comments.
+     */
+    protected function extractSummary(string $content): string
+    {
+        // Just take the first 500 characters of the file for context,
+        // removing excessive whitespace
+        $summary = substr($content, 0, 1000);
+        return preg_replace('/\s+/', ' ', $summary);
+    }
+
+    /**
      * Check if a path should be excluded.
-     *
-     * @param string $path
-     * @return bool
      */
     public function isExcluded(string $path): bool
     {
@@ -79,104 +149,5 @@ class CodeParserService
             }
         }
         return false;
-    }
-
-    /**
-     * Parse routes/web.php and routes/api.php.
-     */
-    protected function parseRoutes(string $basePath): array
-    {
-        $routes = [];
-        $files = ['routes/web.php', 'routes/api.php'];
-
-        foreach ($files as $file) {
-            $path = rtrim($basePath, '/') . '/' . $file;
-            if (File::exists($path)) {
-                $content = File::get($path);
-                // Simple regex to find Route::get, Route::post, etc.
-                // Matches Route::get('/path', [Controller::class, 'method']) or Route::get('/path', 'Controller@method')
-                preg_match_all('/Route::(get|post|put|patch|delete|any)\s*\(\s*[\'"]([^\'"]+)[\'"]\s*,\s*(?:\[([^\]]+)\]|[\'"]([^\'"]+)[\'"])/i', $content, $matches, PREG_SET_ORDER);
-
-                foreach ($matches as $match) {
-                    $method = strtoupper($match[1]);
-                    $uri = $match[2];
-                    $action = $match[3] ?: $match[4];
-
-                    // Clean up action if it's [Controller::class, 'method']
-                    if (str_contains($action, '::class')) {
-                        $action = preg_replace('/(\w+)::class\s*,\s*[\'"](\w+)[\'"]/', '$1@$2', $action);
-                    }
-
-                    $routes[] = "$method $uri → $action";
-                }
-            }
-        }
-
-        return $routes;
-    }
-
-    /**
-     * Parse app/Http/Controllers directory.
-     */
-    protected function parseControllers(string $basePath): array
-    {
-        $controllers = [];
-        $controllersPath = rtrim($basePath, '/') . '/app/Http/Controllers';
-
-        if (File::exists($controllersPath)) {
-            $files = File::allFiles($controllersPath);
-
-            foreach ($files as $file) {
-                if ($this->isExcluded($file->getRelativePathname())) {
-                    continue;
-                }
-                if ($file->getExtension() === 'php') {
-                    $content = $file->getContents();
-                    $filename = $file->getFilenameWithoutExtension();
-
-                    if ($filename === 'Controller') {
-                        continue;
-                    }
-
-                    // Extract public methods
-                    preg_match_all('/public\s+function\s+(\w+)\s*\(/i', $content, $matches);
-                    $methods = array_diff($matches[1], ['__construct', 'middleware']);
-
-                    if (!empty($methods)) {
-                        $controllers[] = [
-                            'name' => $filename,
-                            'methods' => array_values($methods),
-                        ];
-                    }
-                }
-            }
-        }
-
-        return $controllers;
-    }
-
-    /**
-     * Parse app/Models directory.
-     */
-    protected function parseModels(string $basePath): array
-    {
-        $models = [];
-        $modelsPath = rtrim($basePath, '/') . '/app/Models';
-
-        if (File::exists($modelsPath)) {
-            $files = File::allFiles($modelsPath);
-
-            foreach ($files as $file) {
-                if ($this->isExcluded($file->getRelativePathname())) {
-                    continue;
-                }
-                if ($file->getExtension() === 'php') {
-                    $filename = $file->getFilenameWithoutExtension();
-                    $models[] = $filename;
-                }
-            }
-        }
-
-        return $models;
     }
 }
