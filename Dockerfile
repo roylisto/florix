@@ -14,14 +14,12 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     sqlite3 \
-    libsqlite3-dev
-
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+    libsqlite3-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install mbstring bcmath gd zip pdo_sqlite pcntl exif
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) mbstring bcmath gd zip pdo_sqlite pcntl exif
 
 # Use custom PHP configuration
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
@@ -32,10 +30,16 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
+# Optimize: Copy only composer files first to leverage Docker layer caching for dependencies
+COPY composer.json composer.lock ./
+
+# Install dependencies before copying the rest of the source code
+RUN composer install --no-interaction --no-scripts --no-autoloader --no-dev
+
 # Copy existing application directory contents
 COPY . /var/www
 
-# Install dependencies
+# Finish composer installation (scripts and autoloader)
 RUN composer install --no-interaction --optimize-autoloader --no-dev
 
 # Setup entrypoint
