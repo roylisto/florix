@@ -21,7 +21,7 @@ class LLMService
     public function generate(string $prompt, ?callable $onProgress = null, array $options = []): string
     {
         $url = config('services.ollama.url', 'http://localhost:11434/api/generate');
-        $model = config('services.ollama.model', 'mistral');
+        $model = config('services.ollama.model', 'phi3');
 
         if (config('services.ollama.mock', false)) {
             Log::info('LLMService: Using MOCK response');

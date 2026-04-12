@@ -57,6 +57,10 @@ services:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
+      - ./docker/ollama/entrypoint.sh:/entrypoint-custom.sh
+    entrypoint: ["/bin/bash", "/entrypoint-custom.sh"]
+    environment:
+      - OLLAMA_MODEL=phi3
     networks:
       - florix-network
 
