@@ -6,6 +6,7 @@ use App\Jobs\AnalyzeRepositoryJob;
 use App\Models\Analysis;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -114,5 +115,102 @@ class ProjectController extends Controller
             'prompt' => $analysis?->prompt ?? '',
             'error' => $analysis?->error ?? null,
         ]);
+    }
+
+    public function browse(Project $project, ?string $path = null)
+    {
+        $analysis = $project->latestAnalysis;
+        if (!$analysis || !$analysis->extracted_path) {
+            return back()->with('error', 'Project source code not available. Run an analysis first.');
+        }
+
+        $basePath = rtrim($analysis->extracted_path, '/');
+        $fullPath = $path ? $basePath . '/' . $path : $basePath;
+
+        if (!str_starts_with(realpath($fullPath), realpath($basePath))) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        if (!File::exists($fullPath)) {
+            abort(404, 'Path not found.');
+        }
+
+        $directories = [];
+        $files = [];
+
+        foreach (File::directories($fullPath) as $dir) {
+            $relPath = str_replace($basePath . '/', '', $dir);
+            $directories[] = [
+                'name' => basename($dir),
+                'path' => $relPath,
+            ];
+        }
+
+        foreach (File::files($fullPath) as $file) {
+            $relPath = str_replace($basePath . '/', '', $file->getRealPath());
+            $files[] = [
+                'name' => $file->getFilename(),
+                'path' => $relPath,
+                'size' => number_format($file->getSize() / 1024, 2) . ' KB',
+            ];
+        }
+
+        $breadcrumbs = [];
+        if ($path) {
+            $parts = explode('/', $path);
+            $current = '';
+            foreach ($parts as $part) {
+                $current .= ($current ? '/' : '') . $part;
+                $breadcrumbs[] = ['name' => $part, 'path' => $current];
+            }
+        }
+
+        return view('projects.browse', compact('project', 'directories', 'files', 'path', 'breadcrumbs'));
+    }
+
+    public function viewFile(Project $project, string $path)
+    {
+        $analysis = $project->latestAnalysis;
+        if (!$analysis || !$analysis->extracted_path) {
+            return back()->with('error', 'Project source code not available.');
+        }
+
+        $basePath = rtrim($analysis->extracted_path, '/');
+        $fullPath = $basePath . '/' . $path;
+
+        if (!str_starts_with(realpath($fullPath), realpath($basePath))) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        if (!File::exists($fullPath) || File::isDirectory($fullPath)) {
+            abort(404, 'File not found.');
+        }
+
+        $content = File::get($fullPath);
+        $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
+
+        $breadcrumbs = [];
+        $parts = explode('/', $path);
+        $current = '';
+        foreach ($parts as $part) {
+            $current .= ($current ? '/' : '') . $part;
+            $breadcrumbs[] = ['name' => $part, 'path' => $current];
+        }
+
+        return view('projects.view_file', compact('project', 'path', 'content', 'extension', 'breadcrumbs'));
+    }
+
+    public function destroy(Project $project)
+    {
+        // Delete associated project files
+        $projectDir = storage_path('app/projects/' . $project->id);
+        if (File::exists($projectDir)) {
+            File::deleteDirectory($projectDir);
+        }
+
+        // Delete project and related data (cascading deletes for analyses should be handled in migration or model)
+        $project->delete();
+
+        return redirect()->route('projects.index')->with('success', 'Project and its analysis data deleted successfully.');
     }
 }

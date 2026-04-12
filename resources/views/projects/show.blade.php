@@ -16,6 +16,16 @@
                 <a href="{{ route('projects.index') }}" class="text-sm text-gray-500 hover:text-green-600 font-medium">
                     &larr; Back to Dashboard
                 </a>
+                @if ($analysis?->extracted_path)
+                    <a href="{{ route('projects.browse', $project) }}"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        Browse Source Code
+                    </a>
+                @endif
             </div>
         </div>
 

@@ -21,7 +21,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
      *
      * @var int
      */
-    public $timeout = 3600; // 60 minutes
+    public $timeout = 7200; // 2 hours
 
     public Project $project;
     public Analysis $analysis;
@@ -124,15 +124,31 @@ class AnalyzeRepositoryJob implements ShouldQueue
             }
 
             // Step 2: Call LLM
-            $this->logStep('Step 2: Summarizing files one by one...');
+            $this->logStep('Step 2: Summarizing important files...');
             $this->analysis->update([
                 'status' => 'generating_explanation',
                 'progress_message' => 'AI is analyzing files...'
             ]);
 
             $structure = $parsedData['structure'] ?? [];
-            // Limit to 20 important files for faster processing
-            $importantFiles = array_slice($structure, 0, 20);
+
+            // Sort files by importance (Controllers first, then Models, then others)
+            usort($structure, function ($a, $b) {
+                $aPath = strtolower($a['path']);
+                $bPath = strtolower($b['path']);
+
+                $getWeight = function ($path) {
+                    if (str_contains($path, 'controller')) return 1;
+                    if (str_contains($path, 'model')) return 2;
+                    if (str_contains($path, 'route')) return 3;
+                    return 10;
+                };
+
+                return $getWeight($aPath) <=> $getWeight($bPath);
+            });
+
+            // Limit to 10 most important files for faster processing on CPU
+            $importantFiles = array_slice($structure, 0, 10);
             $fileSummaries = [];
 
             foreach ($importantFiles as $index => $file) {
@@ -141,14 +157,13 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 $this->logStep("Summarizing file [{$progress}/{$total}]: {$file['path']}");
 
                 $filePrompt = $this->buildFilePrompt($file);
-                // No need to log each file prompt to avoid clutter,
-                // but we can update the 'prompt' field with the last one for debugging
                 $this->analysis->update(['prompt' => $filePrompt]);
 
                 try {
-                    $summary = $llm->generate($filePrompt, function ($message) use ($progress, $total) {
-                        // Silent progress updates to avoid log spam
-                    });
+                    // Use a very low num_predict for single file summaries to keep it fast
+                    $summary = $llm->generate($filePrompt, null, [
+                        'num_predict' => 60, // Very short summary
+                    ]);
                     $fileSummaries[] = [
                         'path' => $file['path'],
                         'summary' => $summary
@@ -167,18 +182,28 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
             $llmOutput = $llm->generate($finalPrompt, function ($message) {
                 $this->logStep('AI generating final report: ' . $message);
-            });
+            }, [
+                'num_predict' => 800, // Enough for the full report
+            ]);
 
             $this->logStep('AI response received. Output length: ' . strlen($llmOutput));
 
             // Step 4: Save results
-            $this->logStep('Step 4: Saving results...');
+            $this->logStep('Step 4: Moving files to project directory...');
+            $projectDir = storage_path('app/projects/' . $this->project->id);
+            if (File::exists($projectDir)) {
+                File::deleteDirectory($projectDir);
+            }
+            File::makeDirectory($projectDir, 0755, true);
+            File::copyDirectory($basePath, $projectDir);
+
             $this->analysis->update([
                 'llm_output' => $llmOutput,
                 'status' => 'completed',
-                'progress_message' => 'Analysis completed.'
+                'progress_message' => 'Analysis completed.',
+                'extracted_path' => $projectDir,
             ]);
-            $this->logStep('Analysis completed successfully.');
+            $this->logStep('Analysis completed successfully. Files saved to project directory.');
         } catch (\Exception $e) {
             $this->logStep('Analysis failed: ' . $e->getMessage());
             Log::error('Analysis failed: ' . $e->getMessage());

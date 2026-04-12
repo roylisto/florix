@@ -14,10 +14,11 @@ class LLMService
      *
      * @param string $prompt
      * @param callable|null $onProgress
+     * @param array $options
      * @return string
      * @throws \Exception
      */
-    public function generate(string $prompt, ?callable $onProgress = null): string
+    public function generate(string $prompt, ?callable $onProgress = null, array $options = []): string
     {
         $url = config('services.ollama.url', 'http://localhost:11434/api/generate');
         $model = config('services.ollama.model', 'mistral');
@@ -33,7 +34,16 @@ class LLMService
             $this->streamBuffer = ''; // Reset buffer for each request
 
             $fullResponse = '';
-            // Use a 30-minute timeout for the initial connection and the stream
+
+            // Merge custom options with defaults
+            $ollamaOptions = array_merge([
+                'num_predict' => 800,  // Default max tokens
+                'temperature' => 0.1,  // Keep it deterministic
+                'num_ctx' => 2048,     // Context size
+                'top_k' => 20,         // Sampling speed
+            ], $options);
+
+            // Use a 1-hour timeout for the initial connection and the stream
             $response = Http::timeout(3600)
                 ->withOptions([
                     'stream' => true,
@@ -43,12 +53,7 @@ class LLMService
                     'model' => $model,
                     'prompt' => $prompt,
                     'stream' => true,
-                    'options' => [
-                        'num_predict' => 800,  // Reduced for speed on CPU
-                        'temperature' => 0.1,  // Keep it deterministic
-                        'num_ctx' => 2048,     // Context size
-                        'top_k' => 20,         // Sampling speed
-                    ]
+                    'options' => $ollamaOptions
                 ]);
 
             if ($response->failed()) {
