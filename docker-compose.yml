@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: florix-worker
-    command: php artisan queue:work --timeout=660
+    command: php artisan queue:work --timeout=3660
     volumes:
       - .:/var/www
       - ${HOME}:/hosthome:ro

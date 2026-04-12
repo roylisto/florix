@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Log;
 
 class LLMService
 {
+    protected string $streamBuffer = '';
+
     /**
      * Send a prompt to the local Ollama instance.
      *
@@ -28,10 +30,11 @@ class LLMService
         try {
             Log::info("LLMService: Starting request to Ollama ({$url}) with model {$model}");
             $startTime = microtime(true);
+            $this->streamBuffer = ''; // Reset buffer for each request
 
             $fullResponse = '';
             // Use a 30-minute timeout for the initial connection and the stream
-            $response = Http::timeout(1800)
+            $response = Http::timeout(3600)
                 ->withOptions([
                     'stream' => true,
                     'connect_timeout' => 60, // 1 minute to just connect
@@ -41,10 +44,10 @@ class LLMService
                     'prompt' => $prompt,
                     'stream' => true,
                     'options' => [
-                        'num_predict' => 1500, // Reduced slightly for speed
+                        'num_predict' => 800,  // Reduced for speed on CPU
                         'temperature' => 0.1,  // Keep it deterministic
-                        'num_ctx' => 4096,     // Ensure enough context for 50 files
-                        'top_k' => 20,         // Faster sampling
+                        'num_ctx' => 2048,     // Context size
+                        'top_k' => 20,         // Sampling speed
                     ]
                 ]);
 
@@ -54,12 +57,13 @@ class LLMService
             }
 
             Log::info("LLMService: Headers received from Ollama. Starting to read stream...");
-            $body = $response->toPsrResponse()->getBody();
+            $stream = $response->toPsrResponse()->getBody();
             $chunkCount = 0;
             $lastProgressUpdate = microtime(true);
 
-            while (!$body->eof()) {
-                $line = $this->readLine($body);
+            // Use a more efficient way to read line-by-line from the stream
+            while (!$stream->eof()) {
+                $line = $this->readLineFromStream($stream);
                 if (empty($line)) continue;
 
                 $data = json_decode($line, true);
@@ -69,10 +73,10 @@ class LLMService
 
                     // Provide progress updates every 20 tokens or every 5 seconds
                     if ($onProgress && ($chunkCount % 20 === 0 || (microtime(true) - $lastProgressUpdate) > 5)) {
-                        $onProgress("Received " . $chunkCount . " tokens...");
+                        $onProgress("Generated " . $chunkCount . " tokens...");
                         $lastProgressUpdate = microtime(true);
                     }
-                    
+
                     if ($chunkCount === 1 || $chunkCount % 100 === 0) {
                         Log::debug("LLMService: Received {$chunkCount} tokens...");
                     }
@@ -99,18 +103,34 @@ class LLMService
     }
 
     /**
-     * Read a line from a stream.
+     * Efficiently read a line from a PSR-7 stream using a buffer.
      */
-    protected function readLine($stream): string
+    protected function readLineFromStream($stream): string
     {
-        $line = '';
-        while (!$stream->eof()) {
-            $char = $stream->read(1);
-            if ($char === '' || $char === "\n") {
-                break;
-            }
-            $line .= $char;
+        // If we have a newline in the buffer, return that line
+        $pos = strpos($this->streamBuffer, "\n");
+        if ($pos !== false) {
+            $line = substr($this->streamBuffer, 0, $pos);
+            $this->streamBuffer = substr($this->streamBuffer, $pos + 1);
+            return trim($line);
         }
+
+        // Otherwise, read more from the stream until we find a newline
+        while (!$stream->eof()) {
+            $chunk = $stream->read(1024);
+            $this->streamBuffer .= $chunk;
+
+            $pos = strpos($this->streamBuffer, "\n");
+            if ($pos !== false) {
+                $line = substr($this->streamBuffer, 0, $pos);
+                $this->streamBuffer = substr($this->streamBuffer, $pos + 1);
+                return trim($line);
+            }
+        }
+
+        // End of stream, return what's left
+        $line = $this->streamBuffer;
+        $this->streamBuffer = '';
         return trim($line);
     }
 

@@ -21,7 +21,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
      *
      * @var int
      */
-    public $timeout = 1800; // 30 minutes
+    public $timeout = 3600; // 60 minutes
 
     public Project $project;
     public Analysis $analysis;
@@ -124,25 +124,55 @@ class AnalyzeRepositoryJob implements ShouldQueue
             }
 
             // Step 2: Call LLM
-            $this->logStep('Step 2: Calling LLM for explanation...');
+            $this->logStep('Step 2: Summarizing files one by one...');
             $this->analysis->update([
                 'status' => 'generating_explanation',
-                'progress_message' => 'AI is generating explanation...'
+                'progress_message' => 'AI is analyzing files...'
             ]);
-            $prompt = $this->buildPrompt($parsedData);
-            $this->analysis->update(['prompt' => $prompt]);
 
-            $this->logStep('LLM Prompt built. Character count: ' . strlen($prompt));
-            $this->logStep('Sending request to AI model...');
+            $structure = $parsedData['structure'] ?? [];
+            // Limit to 20 important files for faster processing
+            $importantFiles = array_slice($structure, 0, 20);
+            $fileSummaries = [];
 
-            $llmOutput = $llm->generate($prompt, function ($message) {
-                $this->logStep('AI generating: ' . $message);
+            foreach ($importantFiles as $index => $file) {
+                $progress = $index + 1;
+                $total = count($importantFiles);
+                $this->logStep("Summarizing file [{$progress}/{$total}]: {$file['path']}");
+
+                $filePrompt = $this->buildFilePrompt($file);
+                // No need to log each file prompt to avoid clutter,
+                // but we can update the 'prompt' field with the last one for debugging
+                $this->analysis->update(['prompt' => $filePrompt]);
+
+                try {
+                    $summary = $llm->generate($filePrompt, function ($message) use ($progress, $total) {
+                        // Silent progress updates to avoid log spam
+                    });
+                    $fileSummaries[] = [
+                        'path' => $file['path'],
+                        'summary' => $summary
+                    ];
+                } catch (\Exception $e) {
+                    $this->logStep("Failed to summarize {$file['path']}: " . $e->getMessage());
+                }
+            }
+
+            $this->logStep('Step 3: Generating final business explanation...');
+            $this->analysis->update(['progress_message' => 'Generating final explanation...']);
+
+            $finalPrompt = $this->buildFinalPrompt($fileSummaries);
+            $this->analysis->update(['prompt' => $finalPrompt]);
+            $this->logStep('Final prompt built. Character count: ' . strlen($finalPrompt));
+
+            $llmOutput = $llm->generate($finalPrompt, function ($message) {
+                $this->logStep('AI generating final report: ' . $message);
             });
 
             $this->logStep('AI response received. Output length: ' . strlen($llmOutput));
 
-            // Step 3: Save results
-            $this->logStep('Step 3: Saving results...');
+            // Step 4: Save results
+            $this->logStep('Step 4: Saving results...');
             $this->analysis->update([
                 'llm_output' => $llmOutput,
                 'status' => 'completed',
@@ -209,15 +239,64 @@ class AnalyzeRepositoryJob implements ShouldQueue
         return null;
     }
 
-    protected function buildPrompt(array $parsedData): string
+    protected function buildFilePrompt(array $file): string
     {
-        // Limit the structure to the first 50 files if there are too many, to avoid token limits
-        $structure = $parsedData['structure'] ?? [];
-        if (count($structure) > 50) {
-            $structure = array_slice($structure, 0, 50);
+        $json = json_encode([
+            'path' => $file['path'],
+            'name' => $file['name'],
+            'classes' => $file['classes'] ?? [],
+            'methods' => $file['methods'] ?? [],
+            'summary' => $file['summary'] ?? ''
+        ]);
+
+        return "Analyze this file and provide a ONE SENTENCE business summary of what it does.\n\nDATA:\n{$json}\n\nSUMMARY:";
+    }
+
+    protected function buildFinalPrompt(array $fileSummaries): string
+    {
+        $summaryList = "";
+        foreach ($fileSummaries as $item) {
+            $summaryList .= "- {$item['path']}: {$item['summary']}\n";
         }
 
-        $json = json_encode(['total_files' => $parsedData['total_files'] ?? 0, 'structure' => $structure], JSON_PRETTY_PRINT);
+        return <<<PROMPT
+You are a senior product manager explaining a software project to a non-technical client.
+I have provided a list of summaries for individual files in the project.
+
+RULES:
+- Do NOT mention code, technical jargon, or file names in the final output.
+- Use simple business language.
+- Focus on what the system does from a user perspective.
+
+FILE SUMMARIES:
+{$summaryList}
+
+OUTPUT FORMAT:
+FEATURES
+- Bullet list of high-level features.
+
+WHAT USER SEES
+- Describe the user interface (e.g., "A dashboard with statistics").
+
+USER FLOW
+- Step-by-step: User does X → System does Y.
+
+MERMAID DIAGRAM
+graph TD
+A[User action] --> B[System response]
+B --> C[Further action]
+PROMPT;
+    }
+
+    protected function buildPrompt(array $parsedData): string
+    {
+        // Limit the structure to the first 25 files to ensure fast processing on CPU
+        $structure = $parsedData['structure'] ?? [];
+        if (count($structure) > 25) {
+            $structure = array_slice($structure, 0, 25);
+        }
+
+        $json = json_encode(['total_files' => $parsedData['total_files'] ?? 0, 'structure' => $structure]);
 
         return <<<PROMPT
 You are a senior product manager and system architect. You are explaining a software project to a non-technical client.

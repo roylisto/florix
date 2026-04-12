@@ -127,9 +127,9 @@ class CodeParserService
      */
     protected function extractSummary(string $content): string
     {
-        // Just take the first 500 characters of the file for context,
-        // removing excessive whitespace
-        $summary = substr($content, 0, 1000);
+        // Just take the first 400 characters of the file for context,
+        // removing excessive whitespace to keep the prompt compact
+        $summary = substr($content, 0, 400);
         return preg_replace('/\s+/', ' ', $summary);
     }
 
