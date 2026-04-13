@@ -37,9 +37,9 @@ class LLMService
 
             // Merge custom options with defaults
             $ollamaOptions = array_merge([
-                'num_predict' => 800,  // Default max tokens
+                'num_predict' => 1000, // Default max tokens
                 'temperature' => 0.1,  // Keep it deterministic
-                'num_ctx' => 2048,     // Context size
+                'num_ctx' => 4096,     // Larger default context size
                 'top_k' => 20,         // Sampling speed
             ], $options);
 

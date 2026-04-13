@@ -56,6 +56,12 @@ class AnalyzeRepositoryJob implements ShouldQueue
             $basePath = $this->localPath ? $this->resolveHostPath($this->localPath) : null;
             $parsedData = $this->analysis->parsed_data;
 
+            // If we have previous extracted files, use that as base path if nothing else is provided
+            if (!$basePath && $this->analysis->extracted_path && File::exists($this->analysis->extracted_path)) {
+                $basePath = $this->analysis->extracted_path;
+                $this->logStep('Reusing previously extracted files at: ' . $basePath);
+            }
+
             if (!$parsedData && $this->zipPath) {
                 $this->logStep('Opening ZIP at: ' . $this->zipPath);
                 $this->analysis->update(['progress_message' => 'Extracting repository...']);
@@ -193,7 +199,8 @@ class AnalyzeRepositoryJob implements ShouldQueue
             $llmOutput = $llm->generate($finalPrompt, function ($message) {
                 $this->logStep('AI generating final report: ' . $message);
             }, [
-                'num_predict' => 2000, // Increased for larger projects and diagrams
+                'num_predict' => -1, // Unlimited tokens (up to model limit)
+                'num_ctx' => 4096,    // Larger context window for big projects
             ]);
 
             $this->logStep('AI response received. Output length: ' . strlen($llmOutput));
@@ -302,6 +309,8 @@ class AnalyzeRepositoryJob implements ShouldQueue
 You are a senior product manager explaining a software project to a non-technical client.
 I have provided a list of summaries for individual files in the project.
 
+CRITICAL INSTRUCTION: You MUST include a MERMAID DIAGRAM section at the end. This is the most important part of your report.
+
 RULES:
 - Do NOT mention code, technical jargon, or file names in the final output.
 - Use simple business language.
@@ -311,6 +320,8 @@ FILE SUMMARIES:
 {$summaryList}
 
 OUTPUT FORMAT:
+(Your response must follow this EXACT structure)
+
 FEATURES
 - Bullet list of high-level features.
 
@@ -321,7 +332,7 @@ USER FLOW
 - Step-by-step: User does X → System does Y.
 
 MERMAID DIAGRAM
-(MANDATORY: Provide ONLY the Mermaid code starting with 'graph TD' or 'graph LR'. Do NOT use code blocks or markdown, just the raw Mermaid syntax)
+(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use code blocks like ```mermaid. Start directly with 'graph TD' or 'graph LR'. Ensure the diagram is detailed and shows the full user journey)
 graph TD
 A[User action] --> B[System response]
 B --> C[Further action]
@@ -342,6 +353,8 @@ PROMPT;
 You are a senior product manager and system architect. You are explaining a software project to a non-technical client.
 I have provided a JSON representation of the project's source code structure, including file paths, classes, methods, and code snippets.
 
+CRITICAL INSTRUCTION: You MUST include a MERMAID DIAGRAM section at the end. This is the most important part of your report.
+
 RULES:
 - Do NOT mention code, controllers, APIs, database tables, or technical jargon.
 - Use simple business language.
@@ -352,6 +365,8 @@ INPUT DATA (JSON):
 {$json}
 
 OUTPUT FORMAT:
+(Your response must follow this EXACT structure)
+
 FEATURES
 - Bullet list of high-level features provided by this system.
 
@@ -362,7 +377,7 @@ USER FLOW
 - Step-by-step: User does X → System does Y → Outcome Z.
 
 MERMAID DIAGRAM
-(MANDATORY: Provide ONLY the Mermaid code starting with 'graph TD' or 'graph LR'. Do NOT use code blocks or markdown, just the raw Mermaid syntax)
+(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use code blocks like ```mermaid. Start directly with 'graph TD' or 'graph LR'. Ensure the diagram is detailed and shows the full user journey)
 graph TD
 A[User action] --> B[System response]
 B --> C[Further action]
