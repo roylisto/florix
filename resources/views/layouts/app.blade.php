@@ -7,9 +7,22 @@
     <title>Florix - Code to Business Explanation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <script>
         mermaid.initialize({
-            startOnLoad: true
+            startOnLoad: false,
+            securityLevel: 'loose',
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#ecfdf5',
+                primaryTextColor: '#065f46',
+                primaryBorderColor: '#10b981',
+                lineColor: '#10b981',
+                secondaryColor: '#f0fdf4',
+                tertiaryColor: '#ffffff',
+                fontSize: '16px',
+                fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif'
+            }
         });
     </script>
 </head>

@@ -26,14 +26,16 @@
                         Browse Source Code
                     </a>
                 @endif
-                <form action="{{ route('projects.destroy', $project) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this project and all its analysis data?')">
+                <form action="{{ route('projects.destroy', $project) }}" method="POST"
+                    onsubmit="return confirm('Are you sure you want to delete this project and all its analysis data?')">
                     @csrf
                     @method('DELETE')
                     <button type="submit"
                         class="text-red-600 hover:text-red-800 p-2 rounded-lg border border-red-200 hover:border-red-400 transition"
                         title="Delete Project">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                     </button>
                 </form>
@@ -273,87 +275,288 @@
                     </a>
                 </div>
             @else
-                <div class="space-y-8">
-                    @php
-                        $output = $analysis->llm_output;
+                @php
+                    $output = $analysis->llm_output;
 
-                        // Extract features
-                        preg_match('/FEATURES\s*(.*?)(?=\s*WHAT USER SEES|$)/s', $output, $featuresMatch);
-                        $features = isset($featuresMatch[1]) ? trim($featuresMatch[1]) : '';
+                    // Extract features
+                    preg_match('/FEATURES[:\s]*(.*?)(?=\s*WHAT USER SEES|$)/si', $output, $featuresMatch);
+                    $features = isset($featuresMatch[1]) ? trim($featuresMatch[1]) : '';
 
-                        // Extract what user sees
-                        preg_match('/WHAT USER SEES\s*(.*?)(?=\s*USER FLOW|$)/s', $output, $uiMatch);
-                        $ui = isset($uiMatch[1]) ? trim($uiMatch[1]) : '';
+                    // Extract what user sees
+                    preg_match('/WHAT USER SEES[:\s]*(.*?)(?=\s*USER FLOW|$)/si', $output, $uiMatch);
+                    $ui = isset($uiMatch[1]) ? trim($uiMatch[1]) : '';
 
-                        // Extract user flow
-                        preg_match('/USER FLOW\s*(.*?)(?=\s*MERMAID DIAGRAM|$)/s', $output, $flowMatch);
-                        $flow = isset($flowMatch[1]) ? trim($flowMatch[1]) : '';
+                    // Extract user flow
+                    preg_match('/USER FLOW[:\s]*(.*?)(?=\s*MERMAID DIAGRAM|$)/si', $output, $flowMatch);
+                    $flow = isset($flowMatch[1]) ? trim($flowMatch[1]) : '';
 
-                        // Extract mermaid diagram
-                        preg_match('/MERMAID DIAGRAM\s*(graph TD.*)/s', $output, $mermaidMatch);
-                        $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
-                    @endphp
+                    // Extract mermaid diagram
+                    preg_match('/MERMAID DIAGRAM[:\s]*(graph.*)/si', $output, $mermaidMatch);
+                    $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
+                @endphp
 
-                    <!-- Features -->
-                    <div class="bg-white rounded-xl shadow-md p-8">
-                        <h2 class="text-xl font-bold mb-6 text-green-700 flex items-center">
-                            <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Core Features
-                        </h2>
-                        <div class="prose max-w-none text-gray-700">
-                            {!! nl2br(e($features)) !!}
-                        </div>
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="border-b border-gray-200">
+                        <nav class="flex -mb-px overflow-x-auto" aria-label="Tabs">
+                            <button onclick="switchAnalysisTab('features')" id="tab-features"
+                                class="border-green-500 text-green-600 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
+                                Core Features
+                            </button>
+                            <button onclick="switchAnalysisTab('ui')" id="tab-ui"
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
+                                What Your Users Will See
+                            </button>
+                            <button onclick="switchAnalysisTab('flow')" id="tab-flow"
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
+                                The User Journey
+                            </button>
+                            @if ($mermaid)
+                                <button onclick="switchAnalysisTab('diagram')" id="tab-diagram"
+                                    class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
+                                    Process Flowchart
+                                </button>
+                            @endif
+                        </nav>
                     </div>
 
-                    <!-- What User Sees -->
-                    <div class="bg-white rounded-xl shadow-md p-8">
-                        <h2 class="text-xl font-bold mb-6 text-blue-700 flex items-center">
-                            <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            What Your Users Will See
-                        </h2>
-                        <div class="prose max-w-none text-gray-700">
-                            {!! nl2br(e($ui)) !!}
-                        </div>
-                    </div>
-
-                    <!-- User Flow -->
-                    <div class="bg-white rounded-xl shadow-md p-8">
-                        <h2 class="text-xl font-bold mb-6 text-purple-700 flex items-center">
-                            <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                            The User Journey
-                        </h2>
-                        <div class="prose max-w-none text-gray-700">
-                            {!! nl2br(e($flow)) !!}
-                        </div>
-                    </div>
-
-                    <!-- Mermaid Diagram -->
-                    @if ($mermaid)
-                        <div class="bg-white rounded-xl shadow-md p-8">
-                            <h2 class="text-xl font-bold mb-6 text-orange-700 flex items-center">
+                    <div class="p-8">
+                        <!-- Features Content -->
+                        <div id="content-features" class="analysis-tab-content">
+                            <h2 class="text-xl font-bold mb-6 text-green-700 flex items-center">
                                 <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                Process Flowchart
+                                Core Features
                             </h2>
-                            <div class="mermaid bg-gray-50 rounded-lg p-4 flex justify-center">
-                                {{ $mermaid }}
+                            <div class="prose max-w-none text-gray-700">
+                                {!! nl2br(e($features)) !!}
                             </div>
                         </div>
-                    @endif
+
+                        <!-- What User Sees Content -->
+                        <div id="content-ui" class="analysis-tab-content hidden">
+                            <h2 class="text-xl font-bold mb-6 text-blue-700 flex items-center">
+                                <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                What Your Users Will See
+                            </h2>
+                            <div class="prose max-w-none text-gray-700">
+                                {!! nl2br(e($ui)) !!}
+                            </div>
+                        </div>
+
+                        <!-- User Flow Content -->
+                        <div id="content-flow" class="analysis-tab-content hidden">
+                            <h2 class="text-xl font-bold mb-6 text-purple-700 flex items-center">
+                                <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                                The User Journey
+                            </h2>
+                            <div class="prose max-w-none text-gray-700">
+                                {!! nl2br(e($flow)) !!}
+                            </div>
+                        </div>
+
+                        <!-- Mermaid Diagram Content -->
+                        @if ($mermaid)
+                            <div id="content-diagram" class="analysis-tab-content hidden">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h2 class="text-xl font-bold text-orange-700 flex items-center">
+                                        <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Process Flowchart
+                                    </h2>
+                                    <div class="flex space-x-2">
+                                        <button onclick="zoomIn()"
+                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            title="Zoom In">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                            </svg>
+                                        </button>
+                                        <button onclick="zoomOut()"
+                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            title="Zoom Out">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                                            </svg>
+                                        </button>
+                                        <button onclick="resetZoom()"
+                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            title="Reset Zoom">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                        </button>
+                                        <button onclick="toggleFullscreen()"
+                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            title="Toggle Fullscreen">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="diagram-container"
+                                    class="bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative"
+                                    style="height: 500px;">
+                                    <div id="mermaid-wrapper" class="w-full h-full p-4 flex items-center justify-center">
+                                        <div id="mermaid-graph-source" class="hidden">{{ $mermaid }}</div>
+                                        <div id="mermaid-output" class="w-full h-full flex items-center justify-center">
+                                            <!-- SVG will be injected here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
                 </div>
+
+                <script>
+                    let panZoomInstance = null;
+                    let mermaidRendered = false;
+
+                    function switchAnalysisTab(tab) {
+                        // Hide all content
+                        document.querySelectorAll('.analysis-tab-content').forEach(el => el.classList.add('hidden'));
+                        // Reset all tab styles
+                        document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                            if (el.id.startsWith('tab-logs') || el.id.startsWith('tab-prompt')) return; // Ignore debug tabs
+                            el.className =
+                                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
+                        });
+
+                        // Show selected content
+                        document.getElementById('content-' + tab).classList.remove('hidden');
+                        // Set active tab style
+                        document.getElementById('tab-' + tab).className =
+                            'border-green-500 text-green-600 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
+
+                        // Initialize or refresh diagram if diagram tab is selected
+                        if (tab === 'diagram') {
+                            if (!mermaidRendered) {
+                                setTimeout(renderMermaid, 100);
+                            } else {
+                                setTimeout(refreshPanZoom, 100);
+                            }
+                        }
+                    }
+
+                    async function renderMermaid() {
+                        const source = document.getElementById('mermaid-graph-source');
+                        const output = document.getElementById('mermaid-output');
+
+                        if (source && output) {
+                            try {
+                                const {
+                                    svg
+                                } = await mermaid.render('mermaid-svg-rendered', source.innerText);
+                                output.innerHTML = svg;
+                                mermaidRendered = true;
+                                setTimeout(initPanZoom, 100);
+                            } catch (error) {
+                                console.error('Mermaid render error:', error);
+                                output.innerHTML = '<div class="text-red-500">Failed to render flowchart.</div>';
+                            }
+                        }
+                    }
+
+                    function initPanZoom() {
+                        const svg = document.querySelector('#mermaid-output svg');
+                        if (svg) {
+                            // Strip Mermaid's restrictive styles
+                            svg.removeAttribute('width');
+                            svg.removeAttribute('height');
+                            svg.removeAttribute('style');
+                            svg.style.width = '100%';
+                            svg.style.height = '100%';
+                            svg.style.display = 'block';
+                            svg.style.maxWidth = 'none';
+
+                            panZoomInstance = svgPanZoom(svg, {
+                                zoomEnabled: true,
+                                controlIconsEnabled: false,
+                                fit: true,
+                                center: true,
+                                minZoom: 0.1,
+                                maxZoom: 10,
+                                refreshRate: 'auto'
+                            });
+                        }
+                    }
+
+                    function refreshPanZoom() {
+                        if (panZoomInstance) {
+                            panZoomInstance.resize();
+                            panZoomInstance.fit();
+                            panZoomInstance.center();
+                        }
+                    }
+
+                    window.addEventListener('resize', refreshPanZoom);
+
+                    function zoomIn() {
+                        if (panZoomInstance) panZoomInstance.zoomIn();
+                    }
+
+                    function zoomOut() {
+                        if (panZoomInstance) panZoomInstance.zoomOut();
+                    }
+
+                    function resetZoom() {
+                        if (panZoomInstance) {
+                            panZoomInstance.reset();
+                            panZoomInstance.fit();
+                            panZoomInstance.center();
+                        }
+                    }
+
+                    function toggleFullscreen() {
+                        const container = document.getElementById('diagram-container');
+                        if (!document.fullscreenElement) {
+                            container.requestFullscreen().catch(err => {
+                                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+                            });
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    }
+
+                    // Handle fullscreen change
+                    document.addEventListener('fullscreenchange', () => {
+                        const container = document.getElementById('diagram-container');
+                        if (document.fullscreenElement) {
+                            container.style.height = '100vh';
+                            container.classList.add('bg-white');
+                        } else {
+                            container.style.height = '500px';
+                            container.classList.remove('bg-white');
+                        }
+                        if (panZoomInstance) {
+                            panZoomInstance.resize();
+                            panZoomInstance.fit();
+                            panZoomInstance.center();
+                        }
+                    });
+                </script>
             @endif
         @endif
     </div>

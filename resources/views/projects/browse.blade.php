@@ -95,7 +95,7 @@
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     <a href="{{ route('projects.view', [$project, 'path' => $file['path']]) }}"
-                                        class="flex items-center text-gray-700 hover:text-blue-600">
+                                        class="flex items-center text-gray-700 hover:text-green-600">
                                         <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -107,7 +107,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $file['size'] }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a href="{{ route('projects.view', [$project, 'path' => $file['path']]) }}"
-                                        class="text-blue-600 hover:text-blue-900">View</a>
+                                        class="text-green-600 hover:text-green-900">View</a>
                                 </td>
                             </tr>
                         @endforeach

@@ -124,15 +124,15 @@ class ProjectController extends Controller
             return back()->with('error', 'Project source code not available. Run an analysis first.');
         }
 
-        $basePath = rtrim($analysis->extracted_path, '/');
+        $basePath = $this->resolvePath($analysis->extracted_path);
         $fullPath = $path ? $basePath . '/' . $path : $basePath;
-
-        if (!str_starts_with(realpath($fullPath), realpath($basePath))) {
-            abort(403, 'Unauthorized access.');
-        }
 
         if (!File::exists($fullPath)) {
             abort(404, 'Path not found.');
+        }
+
+        if (!str_starts_with(realpath($fullPath), realpath($basePath))) {
+            abort(403, 'Unauthorized access.');
         }
 
         $directories = [];
@@ -168,22 +168,27 @@ class ProjectController extends Controller
         return view('projects.browse', compact('project', 'directories', 'files', 'path', 'breadcrumbs'));
     }
 
-    public function viewFile(Project $project, string $path)
+    public function viewFile(Project $project, Request $request)
     {
+        $path = $request->query('path');
+        if (!$path) {
+            abort(404, 'Path required.');
+        }
+
         $analysis = $project->latestAnalysis;
         if (!$analysis || !$analysis->extracted_path) {
             return back()->with('error', 'Project source code not available.');
         }
 
-        $basePath = rtrim($analysis->extracted_path, '/');
+        $basePath = $this->resolvePath($analysis->extracted_path);
         $fullPath = $basePath . '/' . $path;
-
-        if (!str_starts_with(realpath($fullPath), realpath($basePath))) {
-            abort(403, 'Unauthorized access.');
-        }
 
         if (!File::exists($fullPath) || File::isDirectory($fullPath)) {
             abort(404, 'File not found.');
+        }
+
+        if (!str_starts_with(realpath($fullPath), realpath($basePath))) {
+            abort(403, 'Unauthorized access.');
         }
 
         $content = File::get($fullPath);
@@ -198,6 +203,25 @@ class ProjectController extends Controller
         }
 
         return view('projects.view_file', compact('project', 'path', 'content', 'extension', 'breadcrumbs'));
+    }
+
+    private function resolvePath(string $path): string
+    {
+        $path = rtrim($path, '/');
+
+        // If the path already exists, return it
+        if (File::exists($path)) {
+            return $path;
+        }
+
+        // Handle path from different environment (e.g., Docker container path vs local path)
+        // If it looks like a storage/app/projects/{id} path, remap it to current environment
+        if (preg_match('/storage\/app\/projects\/(\d+)/', $path, $matches)) {
+            $projectId = $matches[1];
+            return storage_path('app/projects/' . $projectId);
+        }
+
+        return $path;
     }
 
     public function destroy(Project $project)
