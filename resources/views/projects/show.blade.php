@@ -2,9 +2,9 @@
 
 @section('content')
     <div class="max-w-4xl mx-auto">
-        <div class="mb-8 flex items-center justify-between">
-            <h1 class="text-3xl font-bold text-gray-900">{{ $project->name }}</h1>
+        <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center space-x-4">
+                <h1 class="text-3xl font-bold text-gray-900">{{ $project->name }}</h1>
                 <span id="status-badge"
                     class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                 @if ($analysis?->status === 'completed') bg-green-100 text-green-800
@@ -13,12 +13,21 @@
                 @else bg-gray-100 text-gray-800 @endif">
                     {{ ucfirst(str_replace('_', ' ', $analysis?->status ?? 'pending')) }}
                 </span>
-                <a href="{{ route('projects.index') }}" class="text-sm text-gray-500 hover:text-green-600 font-medium">
-                    &larr; Back to Dashboard
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ route('projects.index') }}"
+                    class="text-sm text-gray-500 hover:text-green-600 font-medium flex items-center transition py-2 px-3 rounded-lg hover:bg-gray-100">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Dashboard
                 </a>
+
                 @if ($analysis?->extracted_path)
                     <a href="{{ route('projects.browse', $project) }}"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center">
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -26,12 +35,27 @@
                         Browse Source Code
                     </a>
                 @endif
-                <form action="{{ route('projects.destroy', $project) }}" method="POST"
+
+                @if ($analysis?->status === 'completed')
+                    <form action="{{ route('projects.regenerate', $project) }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Re-generate
+                        </button>
+                    </form>
+                @endif
+
+                <form action="{{ route('projects.destroy', $project) }}" method="POST" class="inline"
                     onsubmit="return confirm('Are you sure you want to delete this project and all its analysis data?')">
                     @csrf
                     @method('DELETE')
                     <button type="submit"
-                        class="text-red-600 hover:text-red-800 p-2 rounded-lg border border-red-200 hover:border-red-400 transition"
+                        class="text-red-600 hover:text-red-800 p-2 rounded-lg border border-red-200 hover:border-red-400 transition bg-white shadow-sm"
                         title="Delete Project">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -219,7 +243,8 @@
                     </svg>
                 </div>
                 <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Analysis Failed</h2>
-                <p class="text-gray-600 mb-6 text-center">Something went wrong during the analysis. Review the error details
+                <p class="text-gray-600 mb-6 text-center">Something went wrong during the analysis. Review the error
+                    details
                     below.</p>
                 @if (!empty($analysis?->error))
                     <div class="mb-6">
@@ -290,9 +315,16 @@
                     preg_match('/USER FLOW[:\s]*(.*?)(?=\s*MERMAID DIAGRAM|$)/si', $output, $flowMatch);
                     $flow = isset($flowMatch[1]) ? trim($flowMatch[1]) : '';
 
-                    // Extract mermaid diagram
-                    preg_match('/MERMAID DIAGRAM[:\s]*(graph.*)/si', $output, $mermaidMatch);
+                    // Extract mermaid diagram - more robust matching for larger projects
+                    preg_match('/MERMAID DIAGRAM[:\s]*.*?(graph\s+(TD|LR|TB|BT).*)/si', $output, $mermaidMatch);
                     $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
+
+                    // Clean up potential markdown code blocks that AI might still include
+                    if ($mermaid) {
+                        $mermaid = preg_replace('/```(mermaid|plaintext)?\s*/i', '', $mermaid);
+                        $mermaid = preg_replace('/\s*```$/i', '', $mermaid);
+                        $mermaid = trim($mermaid);
+                    }
                 @endphp
 
                 <div class="bg-white rounded-xl shadow-md overflow-hidden">

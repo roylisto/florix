@@ -54,8 +54,9 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
         try {
             $basePath = $this->localPath ? $this->resolveHostPath($this->localPath) : null;
+            $parsedData = $this->analysis->parsed_data;
 
-            if ($this->zipPath) {
+            if (!$parsedData && $this->zipPath) {
                 $this->logStep('Opening ZIP at: ' . $this->zipPath);
                 $this->analysis->update(['progress_message' => 'Extracting repository...']);
                 File::makeDirectory($tempDir, 0755, true);
@@ -67,7 +68,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
                     // Extract all files
                     $zip->extractTo($tempDir);
                     $zip->close();
-                    
+
                     // Fix permissions on extracted files immediately after extraction
                     // This prevents "Permission denied" errors during copy/delete
                     exec("chmod -R 775 " . escapeshellarg($tempDir));
@@ -100,20 +101,25 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 }
             }
 
-            if (!$basePath || !File::exists($basePath)) {
-                throw new \Exception('Repository path does not exist.');
+            if (!$parsedData && (!$basePath || !File::exists($basePath))) {
+                throw new \Exception('Repository path does not exist and no previous data found.');
             }
 
-            // Step 1: Parse code
-            $this->logStep('Step 1: Parsing code...');
-            $parsedData = $parser->parse($basePath, function ($message) {
-                $this->analysis->update(['progress_message' => $message]);
-                $this->logStep('Parsing: ' . $message);
-            });
-            $this->analysis->update([
-                'parsed_data' => $parsedData,
-                'progress_message' => 'Code parsed successfully.'
-            ]);
+            // Step 1: Parse code (skip if we already have data)
+            if (!$parsedData) {
+                $this->logStep('Step 1: Parsing code...');
+                $parsedData = $parser->parse($basePath, function ($message) {
+                    $this->analysis->update(['progress_message' => $message]);
+                    $this->logStep('Parsing: ' . $message);
+                });
+                $this->analysis->update([
+                    'parsed_data' => $parsedData,
+                    'progress_message' => 'Code parsed successfully.'
+                ]);
+            } else {
+                $this->logStep('Step 1: Reusing existing parsed data (skipping parsing).');
+            }
+
             $totalFiles = $parsedData['total_files'] ?? 0;
             $this->logStep('Code parsed successfully. Total source files found: ' . $totalFiles);
 
@@ -187,19 +193,23 @@ class AnalyzeRepositoryJob implements ShouldQueue
             $llmOutput = $llm->generate($finalPrompt, function ($message) {
                 $this->logStep('AI generating final report: ' . $message);
             }, [
-                'num_predict' => 800, // Enough for the full report
+                'num_predict' => 2000, // Increased for larger projects and diagrams
             ]);
 
             $this->logStep('AI response received. Output length: ' . strlen($llmOutput));
 
-            // Step 4: Save results
-            $this->logStep('Step 4: Moving files to project directory...');
+            // Step 4: Save results (only if we parsed new data or if directory is missing)
             $projectDir = storage_path('app/projects/' . $this->project->id);
-            if (File::exists($projectDir)) {
-                File::deleteDirectory($projectDir);
+            if (!empty($basePath) && File::exists($basePath)) {
+                $this->logStep('Step 4: Moving files to project directory...');
+                if (File::exists($projectDir)) {
+                    File::deleteDirectory($projectDir);
+                }
+                File::makeDirectory($projectDir, 0755, true);
+                File::copyDirectory($basePath, $projectDir);
+            } else {
+                $this->logStep('Step 4: Project files already in place (skipping move).');
             }
-            File::makeDirectory($projectDir, 0755, true);
-            File::copyDirectory($basePath, $projectDir);
 
             $this->analysis->update([
                 'llm_output' => $llmOutput,
@@ -311,6 +321,7 @@ USER FLOW
 - Step-by-step: User does X → System does Y.
 
 MERMAID DIAGRAM
+(MANDATORY: Provide ONLY the Mermaid code starting with 'graph TD' or 'graph LR'. Do NOT use code blocks or markdown, just the raw Mermaid syntax)
 graph TD
 A[User action] --> B[System response]
 B --> C[Further action]
@@ -351,6 +362,7 @@ USER FLOW
 - Step-by-step: User does X → System does Y → Outcome Z.
 
 MERMAID DIAGRAM
+(MANDATORY: Provide ONLY the Mermaid code starting with 'graph TD' or 'graph LR'. Do NOT use code blocks or markdown, just the raw Mermaid syntax)
 graph TD
 A[User action] --> B[System response]
 B --> C[Further action]

@@ -88,6 +88,25 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project);
     }
 
+    public function regenerate(Project $project)
+    {
+        $analysis = $project->latestAnalysis;
+        if (!$analysis || $analysis->status !== 'completed') {
+            return back()->with('error', 'No completed analysis to re-generate.');
+        }
+
+        $newAnalysis = Analysis::create([
+            'project_id' => $project->id,
+            'status' => 'pending',
+            'parsed_data' => $analysis->parsed_data,
+            'extracted_path' => $analysis->extracted_path,
+        ]);
+
+        AnalyzeRepositoryJob::dispatch($project, $newAnalysis, null, $project->repo_path);
+
+        return redirect()->route('projects.show', $project);
+    }
+
     public function cancel(Project $project)
     {
         $analysis = $project->latestAnalysis;
