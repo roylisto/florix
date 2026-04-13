@@ -2,32 +2,37 @@
 
 @section('content')
     <div class="max-w-4xl mx-auto">
-        <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-center space-x-4">
-                <h1 class="text-3xl font-bold text-gray-900">{{ $project->name }}</h1>
-                <span id="status-badge"
-                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                @if ($analysis?->status === 'completed') bg-green-100 text-green-800
-                @elseif($analysis?->status === 'processing' || $analysis?->status === 'generating_explanation') bg-blue-100 text-blue-800
-                @elseif($analysis?->status === 'failed') bg-red-100 text-red-800
-                @else bg-gray-100 text-gray-800 @endif">
-                    {{ ucfirst(str_replace('_', ' ', $analysis?->status ?? 'pending')) }}
-                </span>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-3">
+        <div class="mb-8 flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                    <h1 class="text-3xl font-bold text-gray-900 break-words">{{ $project->name }}</h1>
+                    @php
+                        $statusClasses = match ($analysis?->status) {
+                            'completed' => 'bg-green-100 text-green-800',
+                            'processing', 'generating_explanation' => 'bg-blue-100 text-blue-800',
+                            'failed' => 'bg-red-100 text-red-800',
+                            default => 'bg-gray-100 text-gray-800',
+                        };
+                    @endphp
+                    <span id="status-badge"
+                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium shrink-0 {{ $statusClasses }}">
+                        {{ ucfirst(str_replace('_', ' ', $analysis?->status ?? 'pending')) }}
+                    </span>
+                </div>
                 <a href="{{ route('projects.index') }}"
-                    class="text-sm text-gray-500 hover:text-green-600 font-medium flex items-center transition py-2 px-3 rounded-lg hover:bg-gray-100">
+                    class="text-sm text-gray-500 hover:text-green-600 font-medium inline-flex items-center transition py-1 px-2 -ml-2 rounded-lg hover:bg-gray-100">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     Back to Dashboard
                 </a>
+            </div>
 
+            <div class="flex flex-wrap items-center gap-3 shrink-0 lg:mt-1">
                 @if ($analysis?->extracted_path)
                     <a href="{{ route('projects.browse', $project) }}"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm whitespace-nowrap">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -40,7 +45,7 @@
                     <form action="{{ route('projects.regenerate', $project) }}" method="POST" class="inline">
                         @csrf
                         <button type="submit"
-                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm whitespace-nowrap">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

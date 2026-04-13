@@ -87,16 +87,9 @@ Florix is a code analysis tool designed to help developers and project managers 
 
 ## ⚙️ Configuration
 
-- **Ollama Model**: By default, Florix now uses `deepseek-v3` for superior analysis and diagram generation. You can change this in your `.env` file via `OLLAMA_MODEL`.
+- **Ollama Model**: By default, Florix now uses `phi3` for superior analysis and diagram generation. You can change this in your `.env` file via `OLLAMA_MODEL`.
 - **Token Limits**: Configured for unlimited token generation to support large project analyses without truncation.
-- **Resource Limits**: Ensure your Docker engine has sufficient RAM allocated for the `deepseek-v3` model.
-
-## 💖 Funding
-
-If you find Florix useful and would like to support its development, consider making a donation. Your support helps cover the costs of model testing and infrastructure improvements.
-
-- [Support on GitHub Sponsors](https://github.com/sponsors/roy)
-- [Buy me a coffee](https://www.buymeacoffee.com/roy)
+- **Resource Limits**: Ensure your Docker engine has sufficient RAM allocated for the `phi3` model.
 
 ## 🤝 Contribution
 
