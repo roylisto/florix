@@ -5,7 +5,8 @@ ollama serve &
 
 # Wait for Ollama to start responding
 echo "Waiting for Ollama to start..."
-until curl -s http://localhost:11434/api/tags > /dev/null; do
+# The official ollama image doesn't have curl. We can use the ollama CLI itself to check if the server is up.
+until ollama list > /dev/null 2>&1; do
   sleep 2
 done
 
