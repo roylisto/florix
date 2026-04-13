@@ -64,9 +64,13 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 if ($res === true) {
                     $this->logStep('Successfully opened ZIP. Extracting all files to: ' . $tempDir);
 
-                    // Extract all files - we will exclude them during the parsing phase instead
+                    // Extract all files
                     $zip->extractTo($tempDir);
                     $zip->close();
+                    
+                    // Fix permissions on extracted files immediately after extraction
+                    // This prevents "Permission denied" errors during copy/delete
+                    exec("chmod -R 775 " . escapeshellarg($tempDir));
 
                     // Better detection of the base path (handle single root directory)
                     $basePath = $tempDir;
