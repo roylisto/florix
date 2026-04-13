@@ -498,15 +498,28 @@
 
                         if (source && output) {
                             try {
+                                let graphText = source.innerText.trim();
+
+                                // Remove trailing dots that AI sometimes adds outside or at the end of nodes
+                                graphText = graphText.replace(/\.\s*$/g, '');
+
+                                // Fix common AI errors like adding a dot at the end of a node [Text].
+                                graphText = graphText.replace(/\]\./g, ']');
+                                graphText = graphText.replace(/\)\./g, ')');
+                                graphText = graphText.replace(/\}\./g, '}');
+
                                 const {
                                     svg
-                                } = await mermaid.render('mermaid-svg-rendered', source.innerText);
+                                } = await mermaid.render('mermaid-svg-rendered', graphText);
                                 output.innerHTML = svg;
                                 mermaidRendered = true;
                                 setTimeout(initPanZoom, 100);
                             } catch (error) {
                                 console.error('Mermaid render error:', error);
-                                output.innerHTML = '<div class="text-red-500">Failed to render flowchart.</div>';
+                                output.innerHTML = '<div class="text-red-500 p-4 bg-red-50 rounded-lg border border-red-100">' +
+                                    '<p class="font-bold">Failed to render flowchart.</p>' +
+                                    '<p class="text-sm mt-1">The AI generated an invalid diagram format. Try clicking "Re-generate" to fix it.</p>' +
+                                    '</div>';
                             }
                         }
                     }
