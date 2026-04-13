@@ -35,7 +35,7 @@ class CodeParserService
      *
      * @var array
      */
-    protected array $sourceExtensions = ['php', 'js', 'jsx', 'ts', 'tsx', 'py', 'go', 'rb', 'java'];
+    protected array $sourceExtensions = ['php', 'blade.php', 'js', 'jsx', 'ts', 'tsx', 'py', 'go', 'rb', 'java'];
 
     /**
      * Parse the repository at the given path.

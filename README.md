@@ -19,7 +19,7 @@ Florix is a code analysis tool designed to help developers and project managers 
 - **Framework**: Laravel 11.x
 - **Language**: PHP 8.2+
 - **Database**: SQLite
-- **AI Engine**: [Ollama](https://ollama.com/) (running `deepseek-v3`)
+- **AI Engine**: [Ollama](https://ollama.com/) (running `phi3`)
 - **Interactive Diagrams**: [Mermaid.js](https://mermaid.js.org/) with [svg-pan-zoom](https://github.com/ariutta/svg-pan-zoom)
 - **Cache/Queue**: Redis
 - **Infrastructure**: Docker & Docker Compose

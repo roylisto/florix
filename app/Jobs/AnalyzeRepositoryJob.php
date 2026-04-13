@@ -148,7 +148,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
             $structure = $parsedData['structure'] ?? [];
 
-            // Sort files by importance (Controllers first, then Models, then others)
+            // Sort files by importance
             usort($structure, function ($a, $b) {
                 $aPath = strtolower($a['path']);
                 $bPath = strtolower($b['path']);
@@ -157,14 +157,16 @@ class AnalyzeRepositoryJob implements ShouldQueue
                     if (str_contains($path, 'controller')) return 1;
                     if (str_contains($path, 'model')) return 2;
                     if (str_contains($path, 'route')) return 3;
+                    if (str_contains($path, 'blade.php')) return 4;
+                    if (str_contains($path, 'view')) return 5;
                     return 10;
                 };
 
                 return $getWeight($aPath) <=> $getWeight($bPath);
             });
 
-            // Limit to 10 most important files for faster processing on CPU
-            $importantFiles = array_slice($structure, 0, 10);
+            // Analyze ALL files for a truly comprehensive overview
+            $importantFiles = $structure;
             $fileSummaries = [];
 
             foreach ($importantFiles as $index => $file) {
@@ -307,9 +309,10 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
         return <<<PROMPT
 You are a senior product manager explaining a software project to a non-technical client.
-I have provided a list of summaries for individual files in the project.
+I have provided a list of summaries for individual files in the project, including both backend logic (controllers/models) and user interface components (views).
 
-CRITICAL INSTRUCTION: You MUST include a MERMAID DIAGRAM section at the end. This is the most important part of your report.
+CRITICAL INSTRUCTION: You MUST include a DETAILED MERMAID DIAGRAM section at the end. This is the most important part of your report.
+The diagram MUST reflect the actual business logic of the project based on the file summaries provided below.
 
 RULES:
 - Do NOT mention code, technical jargon, or file names in the final output.
@@ -332,20 +335,19 @@ USER FLOW
 - Step-by-step: User does X → System does Y.
 
 MERMAID DIAGRAM
-(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use code blocks like ```mermaid. Start directly with 'graph TD' or 'graph LR'. Ensure the diagram is detailed and shows the full user journey)
+(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use code blocks like ```mermaid. Start directly with 'graph TD' or 'graph LR'. Ensure the diagram is complex and shows multiple paths, decision points, and the full end-to-end user journey as represented by the file summaries)
 graph TD
 A[User action] --> B[System response]
-B --> C[Further action]
+B --> C{Decision}
+C -->|Path 1| D[Result 1]
+C -->|Path 2| E[Result 2]
 PROMPT;
     }
 
     protected function buildPrompt(array $parsedData): string
     {
-        // Limit the structure to the first 25 files to ensure fast processing on CPU
+        // Use all files for full context
         $structure = $parsedData['structure'] ?? [];
-        if (count($structure) > 25) {
-            $structure = array_slice($structure, 0, 25);
-        }
 
         $json = json_encode(['total_files' => $parsedData['total_files'] ?? 0, 'structure' => $structure]);
 
