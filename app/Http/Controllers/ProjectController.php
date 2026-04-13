@@ -158,7 +158,7 @@ class ProjectController extends Controller
         $files = [];
 
         foreach (File::directories($fullPath) as $dir) {
-            $relPath = str_replace($basePath . '/', '', $dir);
+            $relPath = str_replace(rtrim($basePath, '/') . '/', '', $dir);
             $directories[] = [
                 'name' => basename($dir),
                 'path' => $relPath,
@@ -166,7 +166,7 @@ class ProjectController extends Controller
         }
 
         foreach (File::files($fullPath) as $file) {
-            $relPath = str_replace($basePath . '/', '', $file->getRealPath());
+            $relPath = str_replace(rtrim($basePath, '/') . '/', '', $file->getRealPath());
             $files[] = [
                 'name' => $file->getFilename(),
                 'path' => $relPath,
