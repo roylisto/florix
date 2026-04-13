@@ -321,7 +321,11 @@
                     $flow = isset($flowMatch[1]) ? trim($flowMatch[1]) : '';
 
                     // Extract mermaid diagram - more robust matching for larger projects
-                    preg_match('/MERMAID DIAGRAM[:\s]*.*?(graph\s+(TD|LR|TB|BT).*)/si', $output, $mermaidMatch);
+                    preg_match(
+                        '/MERMAID DIAGRAM[:\s]*.*?((?:graph|flowchart)\s+(TD|LR|TB|BT).*)/si',
+                        $output,
+                        $mermaidMatch,
+                    );
                     $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
 
                     // Clean up potential markdown code blocks that AI might still include
@@ -505,13 +509,19 @@
                             try {
                                 let graphText = source.innerText.trim();
 
-                                // Remove trailing dots that AI sometimes adds outside or at the end of nodes
-                                graphText = graphText.replace(/\.\s*$/g, '');
+                                // 1. Strip Markdown code blocks if they exist
+                                graphText = graphText.replace(/```mermaid/g, '');
+                graphText = graphText.replace(/```/g, '');
+                                graphText = graphText.trim();
 
-                                // Fix common AI errors like adding a dot at the end of a node [Text].
+                                // 2. Fix common AI errors like trailing dots outside or at the end of nodes
+                                graphText = graphText.replace(/\.\s*$/g, '');
                                 graphText = graphText.replace(/\]\./g, ']');
                                 graphText = graphText.replace(/\)\./g, ')');
                                 graphText = graphText.replace(/\}\./g, '}');
+
+                                // 3. Fix semicolons at end of lines (common but problematic in some Mermaid versions)
+                                graphText = graphText.split('\n').map(line => line.trim().replace(/;$/, '')).join('\n');
 
                                 const {
                                     svg

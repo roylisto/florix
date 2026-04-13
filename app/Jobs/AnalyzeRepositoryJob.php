@@ -335,7 +335,7 @@ USER FLOW
 - Step-by-step: User does X → System does Y.
 
 MERMAID DIAGRAM
-(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use code blocks like ```mermaid. Start directly with 'graph TD' or 'graph LR'. Ensure the diagram is complex and shows multiple paths, decision points, and the full end-to-end user journey as represented by the file summaries)
+(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use markdown code blocks like ```mermaid. Start directly with 'graph TD', 'graph LR', 'flowchart TD', or 'flowchart LR'. Ensure the diagram is complex and shows multiple paths, decision points, and the full end-to-end user journey as represented by the file summaries)
 graph TD
 A[User action] --> B[System response]
 B --> C{Decision}
@@ -355,7 +355,7 @@ PROMPT;
 You are a senior product manager and system architect. You are explaining a software project to a non-technical client.
 I have provided a JSON representation of the project's source code structure, including file paths, classes, methods, and code snippets.
 
-CRITICAL INSTRUCTION: You MUST include a MERMAID DIAGRAM section at the end. This is the most important part of your report.
+CRITICAL INSTRUCTION: You MUST include a DETAILED MERMAID DIAGRAM section at the end. This is the most important part of your report.
 
 RULES:
 - Do NOT mention code, controllers, APIs, database tables, or technical jargon.
@@ -379,10 +379,12 @@ USER FLOW
 - Step-by-step: User does X → System does Y → Outcome Z.
 
 MERMAID DIAGRAM
-(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use code blocks like ```mermaid. Start directly with 'graph TD' or 'graph LR'. Ensure the diagram is detailed and shows the full user journey)
+(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use markdown code blocks like ```mermaid. Start directly with 'graph TD', 'graph LR', 'flowchart TD', or 'flowchart LR'. Ensure the diagram is complex and shows multiple paths, decision points, and the full end-to-end user journey as represented by the file summaries)
 graph TD
 A[User action] --> B[System response]
-B --> C[Further action]
+B --> C{Decision}
+C -->|Path 1| D[Result 1]
+C -->|Path 2| E[Result 2]
 PROMPT;
     }
 }
