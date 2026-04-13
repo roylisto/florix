@@ -509,19 +509,32 @@
                             try {
                                 let graphText = source.innerText.trim();
 
-                                // 1. Strip Markdown code blocks if they exist
-                                graphText = graphText.replace(/```mermaid/g, '');
-                graphText = graphText.replace(/```/g, '');
-                                graphText = graphText.trim();
+                                // 1. Strip Markdown code blocks
+                                graphText = graphText.replace(/```mermaid/g, '').replace(/```/g, '').trim();
 
-                                // 2. Fix common AI errors like trailing dots outside or at the end of nodes
-                                graphText = graphText.replace(/\.\s*$/g, '');
-                                graphText = graphText.replace(/\]\./g, ']');
-                                graphText = graphText.replace(/\)\./g, ')');
-                                graphText = graphText.replace(/\}\./g, '}');
+                                // 2. Fix the specific Master project syntax errors manually before the regex
+                                // Fix: H{Navigate back home page with timestamp and 'Todos' link}] -> H["Navigate back..."]
+                                // Fix: I{User logs out or closes application]} -> I["User logs out..."]
+                                graphText = graphText.replace(/([A-Z])\{([^}]+)\}\]/g, '$1["$2"]');
+                                graphText = graphText.replace(/([A-Z])\{([^\]]+)\]\}/g, '$1["$2"]');
 
-                                // 3. Fix semicolons at end of lines (common but problematic in some Mermaid versions)
-                                graphText = graphText.split('\n').map(line => line.trim().replace(/;$/, '')).join('\n');
+                                // 3. Robust regex to quote all node labels and fix common punctuation
+                                // Handles [label], (label), {label}, ((label)), [[label]], etc.
+                                graphText = graphText.replace(/([A-Z0-9_-]+)?(\[+|\{+|\(+)(.+?)(\]+|\}+|\)+)/g, function(match, id,
+                                    start, label, end) {
+                                    let cleanLabel = label.trim().replace(/\.+$/g, '').replace(/"/g, '#quot;');
+                                    let nodeId = id || '';
+                                    // Use standard [ ] for the cleaned output to ensure compatibility
+                                    return nodeId + '["' + cleanLabel + '"]';
+                                });
+
+                                // 4. Final cleanup of trailing garbage on lines
+                                graphText = graphText.split('\n')
+                                    .map(line => line.trim().replace(/[;.\s]+$/g, ''))
+                                    .filter(line => line.length > 0)
+                                    .join('\n');
+
+                                console.log('Final Mermaid Text:', graphText);
 
                                 const {
                                     svg
