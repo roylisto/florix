@@ -7,12 +7,13 @@ Florix is a code analysis tool designed to help developers and project managers 
 - **Automated Code Parsing**: Scans Routes, Controllers, and Models to understand the application structure.
 - **Dependency Exclusion**: Automatically skips folders like `node_modules`, `vendor`, `.venv`, and other non-core directories to focus on your actual code.
 - **Flexible Input**: Supports analyzing repositories via ZIP file upload or by specifying a local directory path.
-- **Real-time Progress Tracking**: Live status updates in the UI during both the parsing and AI generation phases.
+- **Real-time Progress Tracking**: Live status updates in the UI during both the parsing and AI generation phases with detailed verbose logs.
 - **AI-Driven Insights**: Uses local LLMs (via Ollama) to generate business-friendly explanations of what your code does.
+- **Optimized Batch Processing**: Dramatically faster analysis using intelligent file batching and core-logic prioritization.
+- **Full Context Mapping**: AI understands your entire project scale through a comprehensive source-map while deep-diving into the most important business logic.
 - **Visual User Flows**: Automatically generates interactive Mermaid.js diagrams with zoom, pan, and fullscreen capabilities.
-- **Smart Retries**: Re-generate AI explanations instantly using previously parsed data without re-scanning the entire codebase.
+- **Smart Retries & Control**: Skip to final analysis at any time, re-generate explanations instantly, or cancel active processes.
 - **Source Code Browser**: Integrated file explorer to view your project structure and individual source files directly in the app.
-- **Manual Control**: Includes a cancel button to stop stale or unwanted analysis processes.
 
 ## 🛠 Tech Stack
 
