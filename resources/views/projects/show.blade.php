@@ -110,7 +110,7 @@
 
                 <!-- Debugging Tabs -->
                 <div class="mt-8 text-left">
-                    <div class="border-b border-gray-200">
+                    <div class="border-b border-gray-200 flex items-center justify-between">
                         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                             <button onclick="switchTab('logs')" id="tab-logs"
                                 class="border-green-500 text-green-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
@@ -121,11 +121,22 @@
                                 AI Prompt
                             </button>
                         </nav>
+                        <div id="logs-actions" class="pb-2">
+                            <button onclick="copyLogs()"
+                                class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] px-2 py-1 rounded border border-gray-300 transition flex items-center gap-1 shadow-sm font-medium"
+                                title="Copy logs to clipboard">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                </svg>
+                                <span>Copy Logs</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div id="content-logs" class="mt-4">
                         <pre id="realtime-logs"
-                            class="bg-gray-900 text-gray-300 p-4 rounded-lg text-xs font-mono overflow-auto max-h-64 border border-gray-800">{{ $analysis?->logs ?? 'Waiting for logs...' }}</pre>
+                            class="bg-gray-900 text-gray-300 p-4 rounded-lg text-xs font-mono overflow-auto max-h-64 border border-gray-800 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">{{ $analysis?->logs ?? 'Waiting for logs...' }}</pre>
                     </div>
 
                     <div id="content-prompt" class="mt-4 hidden">
@@ -158,11 +169,30 @@
                 </div>
 
                 <script>
+                    function copyLogs() {
+                        const logs = document.getElementById('realtime-logs').innerText;
+                        navigator.clipboard.writeText(logs).then(() => {
+                            const btn = document.querySelector('button[onclick="copyLogs()"]');
+                            const span = btn.querySelector('span');
+                            const originalText = span.innerText;
+                            span.innerText = 'Copied!';
+                            btn.classList.add('bg-green-800', 'border-green-600', 'text-white');
+                            setTimeout(() => {
+                                span.innerText = originalText;
+                                btn.classList.remove('bg-green-800', 'border-green-600', 'text-white');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy logs: ', err);
+                            alert('Could not copy logs to clipboard.');
+                        });
+                    }
+
                     function switchTab(tab) {
                         const logsBtn = document.getElementById('tab-logs');
                         const promptBtn = document.getElementById('tab-prompt');
                         const logsContent = document.getElementById('content-logs');
                         const promptContent = document.getElementById('content-prompt');
+                        const logsActions = document.getElementById('logs-actions');
 
                         if (tab === 'logs') {
                             logsBtn.className =
@@ -171,6 +201,7 @@
                                 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
                             logsContent.classList.remove('hidden');
                             promptContent.classList.add('hidden');
+                            logsActions.classList.remove('hidden');
                         } else {
                             promptBtn.className =
                                 'border-green-500 text-green-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
@@ -178,6 +209,7 @@
                                 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
                             promptContent.classList.remove('hidden');
                             logsContent.classList.add('hidden');
+                            logsActions.classList.add('hidden');
                         }
                     }
 

@@ -223,8 +223,10 @@ class AnalyzeRepositoryJob implements ShouldQueue
                     $batchResult = $llm->generate($batchPrompt, function ($message) use ($batchIndex, $totalBatches) {
                         $this->logStep("Batch [" . ($batchIndex + 1) . "/{$totalBatches}] progress: {$message}");
                     }, [
-                        'num_predict' => 500, // Enough for 5 summaries
-                        'temperature' => 0.1,
+                        'num_predict' => 400,
+                        'temperature' => 0,    // Force absolute deterministic for speed
+                        'num_ctx' => 2048,     // Smaller context = faster prefill
+                        'num_thread' => 4,     // Ensure enough threads are assigned
                     ]);
 
                     // Expected format: "path: summary\npath: summary..."
@@ -352,30 +354,18 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
     protected function buildBatchPrompt(array $files): string
     {
-        $fileData = [];
+        $fileList = "";
         foreach ($files as $file) {
-            $fileData[] = [
-                'path' => $file['path'],
-                'classes' => array_column($file['classes'] ?? [], 'name'),
-                'methods' => array_column($file['methods'] ?? [], 'name'),
-                'summary_hint' => $file['summary'] ?? ''
-            ];
+            $methods = implode(', ', array_column($file['methods'] ?? [], 'name'));
+            $fileList .= "FILE: {$file['path']}\nMETHODS: {$methods}\n---\n";
         }
 
-        $json = json_encode($fileData, JSON_PRETTY_PRINT);
-
         return <<<PROMPT
-Analyze the following 5 files from a software project and provide a ONE SENTENCE business summary for EACH file.
-
-RULES:
-- Respond with exactly one line per file.
-- Format each line as "path: summary"
-- Use simple business language.
+Task: Provide a ONE SENTENCE business summary for each file below.
+Format: "path: summary" (one per line)
 
 FILES:
-{$json}
-
-SUMMARIES:
+{$fileList}
 PROMPT;
     }
 
