@@ -65,7 +65,12 @@ class AnalyzeRepositoryJob implements ShouldQueue
             if (!$parsedData && $this->zipPath) {
                 $this->logStep('Opening ZIP at: ' . $this->zipPath);
                 $this->analysis->update(['progress_message' => 'Extracting repository...']);
+
+                if (!File::exists(dirname($tempDir))) {
+                    File::makeDirectory(dirname($tempDir), 0755, true);
+                }
                 File::makeDirectory($tempDir, 0755, true);
+
                 $zip = new ZipArchive();
                 $res = $zip->open($this->zipPath);
                 if ($res === true) {
@@ -74,14 +79,15 @@ class AnalyzeRepositoryJob implements ShouldQueue
                     // Extract all files
                     $zip->extractTo($tempDir);
                     $zip->close();
+                    $this->logStep('ZIP extraction completed.');
 
                     // Fix permissions on extracted files immediately after extraction
                     // This prevents "Permission denied" errors during copy/delete
                     exec("chmod -R 775 " . escapeshellarg($tempDir));
+                    $this->logStep('Permissions updated for extracted files.');
 
                     // Better detection of the base path (handle single root directory)
                     $basePath = $tempDir;
-                    $contents = File::allFiles($tempDir, true); // true for hidden files
                     $directories = File::directories($tempDir);
                     $files = File::files($tempDir);
 
@@ -96,13 +102,14 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
                         if (count($visibleFiles) === 0) {
                             $basePath = $directories[0];
-                            $this->logStep("Detected single root directory in ZIP: {$rootFolderName}");
+                            $this->logStep("Detected single root directory in ZIP: {$rootFolderName}. Adjusting base path.");
                         }
                     }
 
                     $this->analysis->update(['extracted_path' => $basePath]);
-                    $this->logStep('Extraction completed. Base path set to: ' . $basePath);
+                    $this->logStep('Base path set to: ' . $basePath);
                 } else {
+                    $this->logStep('Failed to open ZIP. Error code: ' . $res);
                     throw new \Exception('Could not open ZIP file. Error code: ' . $res . ' (Path: ' . $this->zipPath . ')');
                 }
             }
@@ -148,78 +155,112 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
             $structure = $parsedData['structure'] ?? [];
 
-            // Sort files by importance
-            usort($structure, function ($a, $b) {
-                $aPath = strtolower($a['path']);
-                $bPath = strtolower($b['path']);
+            // 1. Prepare "Full Map" of the project structure for context
+            $fullStructureMap = array_map(function ($file) {
+                return [
+                    'path' => $file['path'],
+                    'classes' => array_column($file['classes'] ?? [], 'name'),
+                    'methods' => array_column($file['methods'] ?? [], 'name'),
+                ];
+            }, $structure);
 
+            // 2. Select and batch core files for detailed summarization
+            $importantFiles = array_filter($structure, function ($file) {
+                $path = strtolower($file['path']);
+                return str_contains($path, 'controller') ||
+                    str_contains($path, 'model') ||
+                    str_contains($path, 'route') ||
+                    str_contains($path, 'service') ||
+                    str_contains($path, 'blade.php');
+            });
+            $this->logStep("Selected " . count($importantFiles) . " core files for deep analysis.");
+
+            // Sort by priority (Controllers/Routes > Models > Views)
+            usort($importantFiles, function ($a, $b) {
                 $getWeight = function ($path) {
-                    if (str_contains($path, 'controller')) return 1;
-                    if (str_contains($path, 'model')) return 2;
-                    if (str_contains($path, 'route')) return 3;
-                    if (str_contains($path, 'blade.php')) return 4;
-                    if (str_contains($path, 'view')) return 5;
+                    $path = strtolower($path);
+                    if (str_contains($path, 'route')) return 1;
+                    if (str_contains($path, 'controller')) return 2;
+                    if (str_contains($path, 'service')) return 3;
+                    if (str_contains($path, 'model')) return 4;
+                    if (str_contains($path, 'blade.php')) return 5;
                     return 10;
                 };
-
-                return $getWeight($aPath) <=> $getWeight($bPath);
+                return $getWeight($a['path']) <=> $getWeight($b['path']);
             });
 
-            // Increase to 25 most important files for a better overview of larger projects
-            $importantFiles = $structure;
+            // Limit to top 25 core files for deep analysis
+            $importantFiles = array_slice($importantFiles, 0, 25);
+            $this->logStep("Limited to top " . count($importantFiles) . " core files to optimize speed.");
+
             $fileSummaries = $this->analysis->file_summaries ?? [];
             $summarizedPaths = array_column($fileSummaries, 'path');
 
-            foreach ($importantFiles as $index => $file) {
-                // Check if the user requested to skip to the final analysis
+            // Filter out already summarized files
+            $filesToSummarize = array_filter($importantFiles, function ($file) use ($summarizedPaths) {
+                return !in_array($file['path'], $summarizedPaths);
+            });
+            $this->logStep("Files remaining to summarize: " . count($filesToSummarize));
+
+            // Process in batches of 5 for speed
+            $batches = array_chunk($filesToSummarize, 5);
+            $totalBatches = count($batches);
+
+            foreach ($batches as $batchIndex => $batch) {
                 $this->analysis->refresh();
                 if ($this->analysis->stop_summarizing) {
                     $this->logStep("User requested to skip remaining file summarizations.");
                     break;
                 }
 
-                // Skip if already summarized (Resume feature)
-                if (in_array($file['path'], $summarizedPaths)) {
-                    $this->logStep("Skipping already summarized file: {$file['path']}");
-                    continue;
-                }
+                $batchPaths = array_column($batch, 'path');
+                $this->logStep("Starting batch [" . ($batchIndex + 1) . "/{$totalBatches}]: " . implode(', ', $batchPaths));
 
-                $progress = $index + 1;
-                $total = count($importantFiles);
-                $this->logStep("Summarizing file [{$progress}/{$total}]: {$file['path']}");
-
-                $filePrompt = $this->buildFilePrompt($file);
-                $this->analysis->update(['prompt' => $filePrompt]);
+                $batchPrompt = $this->buildBatchPrompt($batch);
+                $this->analysis->update(['prompt' => $batchPrompt]);
 
                 try {
-                    // Use a very low num_predict for single file summaries to keep it fast
-                    $summary = $llm->generate($filePrompt, null, [
-                        'num_predict' => 60, // Very short summary
+                    $batchResult = $llm->generate($batchPrompt, function ($message) use ($batchIndex, $totalBatches) {
+                        $this->logStep("Batch [" . ($batchIndex + 1) . "/{$totalBatches}] progress: {$message}");
+                    }, [
+                        'num_predict' => 500, // Enough for 5 summaries
+                        'temperature' => 0.1,
                     ]);
-                    $fileSummaries[] = [
-                        'path' => $file['path'],
-                        'summary' => $summary
-                    ];
-                    
-                    // Cache summaries as we go
+
+                    // Expected format: "path: summary\npath: summary..."
+                    $lines = explode("\n", trim($batchResult));
+                    $batchCount = 0;
+                    foreach ($lines as $line) {
+                        if (str_contains($line, ':')) {
+                            [$path, $summary] = explode(':', $line, 2);
+                            $path = trim(str_replace('- ', '', $path));
+                            $fileSummaries[] = [
+                                'path' => $path,
+                                'summary' => trim($summary)
+                            ];
+                            $batchCount++;
+                        }
+                    }
+                    $this->logStep("Successfully summarized {$batchCount} files in batch " . ($batchIndex + 1) . ".");
+
                     $this->analysis->update(['file_summaries' => $fileSummaries]);
                 } catch (\Exception $e) {
-                    $this->logStep("Failed to summarize {$file['path']}: " . $e->getMessage());
+                    $this->logStep("Batch summarization failed: " . $e->getMessage());
                 }
             }
 
             $this->logStep('Step 3: Generating final business explanation...');
             $this->analysis->update(['progress_message' => 'Generating final explanation...']);
 
-            $finalPrompt = $this->buildFinalPrompt($fileSummaries);
+            $finalPrompt = $this->buildFinalPrompt($fileSummaries, $fullStructureMap);
             $this->analysis->update(['prompt' => $finalPrompt]);
             $this->logStep('Final prompt built. Character count: ' . strlen($finalPrompt));
 
             $llmOutput = $llm->generate($finalPrompt, function ($message) {
                 $this->logStep('AI generating final report: ' . $message);
             }, [
-                'num_predict' => -1, // Unlimited tokens (up to model limit)
-                'num_ctx' => 4096,    // Larger context window for big projects
+                'num_predict' => 1500, // Limit to ~1500 tokens for speed
+                'num_ctx' => 8192,     // Larger context for full map
             ]);
 
             $this->logStep('AI response received. Output length: ' . strlen($llmOutput));
@@ -275,9 +316,14 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
     protected function logStep(string $message): void
     {
-        Log::info($message);
+        Log::info("Analysis {$this->analysis->id}: {$message}");
+
+        // Use a more atomic update to prevent log loss
+        $this->analysis->refresh();
+        $newLogs = ($this->analysis->logs ? $this->analysis->logs . "\n" : "") . "[" . now()->toDateTimeString() . "] " . $message;
+
         $this->analysis->update([
-            'logs' => ($this->analysis->logs ? $this->analysis->logs . "\n" : "") . "[" . now()->toDateTimeString() . "] " . $message
+            'logs' => $newLogs
         ]);
     }
 
@@ -304,6 +350,35 @@ class AnalyzeRepositoryJob implements ShouldQueue
         return null;
     }
 
+    protected function buildBatchPrompt(array $files): string
+    {
+        $fileData = [];
+        foreach ($files as $file) {
+            $fileData[] = [
+                'path' => $file['path'],
+                'classes' => array_column($file['classes'] ?? [], 'name'),
+                'methods' => array_column($file['methods'] ?? [], 'name'),
+                'summary_hint' => $file['summary'] ?? ''
+            ];
+        }
+
+        $json = json_encode($fileData, JSON_PRETTY_PRINT);
+
+        return <<<PROMPT
+Analyze the following 5 files from a software project and provide a ONE SENTENCE business summary for EACH file.
+
+RULES:
+- Respond with exactly one line per file.
+- Format each line as "path: summary"
+- Use simple business language.
+
+FILES:
+{$json}
+
+SUMMARIES:
+PROMPT;
+    }
+
     protected function buildFilePrompt(array $file): string
     {
         $json = json_encode([
@@ -317,26 +392,33 @@ class AnalyzeRepositoryJob implements ShouldQueue
         return "Analyze this file and provide a ONE SENTENCE business summary of what it does.\n\nDATA:\n{$json}\n\nSUMMARY:";
     }
 
-    protected function buildFinalPrompt(array $fileSummaries): string
+    protected function buildFinalPrompt(array $fileSummaries, array $fullStructureMap = []): string
     {
         $summaryList = "";
         foreach ($fileSummaries as $item) {
             $summaryList .= "- {$item['path']}: {$item['summary']}\n";
         }
 
+        $structureJson = json_encode($fullStructureMap, JSON_PRETTY_PRINT);
+
         return <<<PROMPT
 You are a senior product manager explaining a software project to a non-technical client.
-I have provided a list of summaries for individual files in the project, including both backend logic (controllers/models) and user interface components (views).
+I have provided two sets of data:
+1. FULL PROJECT STRUCTURE: A map of all files, classes, and methods in the project to give you context on the project's scale.
+2. CORE FILE SUMMARIES: Detailed one-sentence business summaries for the most important files.
 
 CRITICAL INSTRUCTION: You MUST include a DETAILED MERMAID DIAGRAM section at the end. This is the most important part of your report.
-The diagram MUST reflect the actual business logic of the project based on the file summaries provided below.
+The diagram MUST reflect the actual business logic of the project based on the summaries and structure provided below.
 
 RULES:
-- Do NOT mention code, technical jargon, or file names in the final output.
+- Do NOT mention code, technical jargon, or file names in the final output (except for the Mermaid diagram logic).
 - Use simple business language.
 - Focus on what the system does from a user perspective.
 
-FILE SUMMARIES:
+FULL PROJECT STRUCTURE:
+{$structureJson}
+
+CORE FILE SUMMARIES:
 {$summaryList}
 
 OUTPUT FORMAT:
