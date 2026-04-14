@@ -165,11 +165,25 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 return $getWeight($aPath) <=> $getWeight($bPath);
             });
 
-            // Analyze ALL files for a truly comprehensive overview
+            // Increase to 25 most important files for a better overview of larger projects
             $importantFiles = $structure;
-            $fileSummaries = [];
+            $fileSummaries = $this->analysis->file_summaries ?? [];
+            $summarizedPaths = array_column($fileSummaries, 'path');
 
             foreach ($importantFiles as $index => $file) {
+                // Check if the user requested to skip to the final analysis
+                $this->analysis->refresh();
+                if ($this->analysis->stop_summarizing) {
+                    $this->logStep("User requested to skip remaining file summarizations.");
+                    break;
+                }
+
+                // Skip if already summarized (Resume feature)
+                if (in_array($file['path'], $summarizedPaths)) {
+                    $this->logStep("Skipping already summarized file: {$file['path']}");
+                    continue;
+                }
+
                 $progress = $index + 1;
                 $total = count($importantFiles);
                 $this->logStep("Summarizing file [{$progress}/{$total}]: {$file['path']}");
@@ -186,6 +200,9 @@ class AnalyzeRepositoryJob implements ShouldQueue
                         'path' => $file['path'],
                         'summary' => $summary
                     ];
+                    
+                    // Cache summaries as we go
+                    $this->analysis->update(['file_summaries' => $fileSummaries]);
                 } catch (\Exception $e) {
                     $this->logStep("Failed to summarize {$file['path']}: " . $e->getMessage());
                 }

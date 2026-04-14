@@ -99,10 +99,30 @@ class ProjectController extends Controller
             'project_id' => $project->id,
             'status' => 'pending',
             'parsed_data' => $analysis->parsed_data,
+            'file_summaries' => $analysis->file_summaries,
             'extracted_path' => $analysis->extracted_path,
         ]);
 
         AnalyzeRepositoryJob::dispatch($project, $newAnalysis, null, $project->repo_path);
+
+        return redirect()->route('projects.show', $project);
+    }
+
+    public function resume(Project $project)
+    {
+        $analysis = $project->latestAnalysis;
+        if (!$analysis || !in_array($analysis->status, ['failed', 'cancelled'])) {
+            return back()->with('error', 'No failed or cancelled analysis to resume.');
+        }
+
+        // Reset status and clear skip flag to resume
+        $analysis->update([
+            'status' => 'pending',
+            'stop_summarizing' => false,
+            'error' => null
+        ]);
+
+        AnalyzeRepositoryJob::dispatch($project, $analysis, $analysis->zip_path, $project->repo_path);
 
         return redirect()->route('projects.show', $project);
     }
@@ -133,6 +153,7 @@ class ProjectController extends Controller
             'logs' => $analysis?->logs ?? '',
             'prompt' => $analysis?->prompt ?? '',
             'error' => $analysis?->error ?? null,
+            'stop_summarizing' => $analysis?->stop_summarizing ?? false,
         ]);
     }
 
@@ -222,6 +243,16 @@ class ProjectController extends Controller
         }
 
         return view('projects.view_file', compact('project', 'path', 'content', 'extension', 'breadcrumbs'));
+    }
+
+    public function stopSummarizing(Project $project)
+    {
+        $analysis = $project->latestAnalysis;
+        if ($analysis && in_array($analysis->status, ['pending', 'processing', 'generating_explanation'])) {
+            $analysis->update(['stop_summarizing' => true]);
+            return back()->with('success', 'Skipping to final analysis...');
+        }
+        return back()->with('error', 'No active summarization to stop.');
     }
 
     private function resolvePath(string $path): string

@@ -7,20 +7,24 @@ use Illuminate\Database\Eloquent\Model;
 class Analysis extends Model
 {
     protected $fillable = [
-        'project_id', 
-        'parsed_data', 
-        'llm_output', 
-        'status', 
+        'project_id',
+        'parsed_data',
+        'file_summaries',
+        'llm_output',
+        'status',
+        'stop_summarizing',
         'progress_message',
         'logs',
         'prompt',
-        'error', 
-        'zip_path', 
+        'error',
+        'zip_path',
         'extracted_path'
     ];
 
     protected $casts = [
         'parsed_data' => 'array',
+        'file_summaries' => 'array',
+        'stop_summarizing' => 'boolean',
     ];
 
     public function project()

@@ -134,7 +134,19 @@
                     </div>
                 </div>
 
-                <div class="mt-8">
+                <div class="mt-8 flex items-center gap-4">
+                    @if (in_array($analysis?->status, ['pending', 'processing', 'generating_explanation']) && !$analysis?->stop_summarizing)
+                        <form id="skip-analysis-form" action="{{ route('projects.stop_summarizing', $project) }}"
+                            method="POST">
+                            @csrf
+                            <button type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm"
+                                onclick="return confirm('Stop summarizing remaining files and jump straight to the final analysis?')">
+                                Skip to Final Analysis
+                            </button>
+                        </form>
+                    @endif
+
                     <form action="{{ route('projects.cancel', $project) }}" method="POST">
                         @csrf
                         <button type="submit"
@@ -215,6 +227,17 @@
                                     promptPre.innerText = data.prompt;
                                 }
 
+                                // Update skip button visibility
+                                const skipForm = document.getElementById('skip-analysis-form');
+                                if (skipForm) {
+                                    if (data.stop_summarizing || !['pending', 'processing', 'generating_explanation'].includes(data
+                                            .status)) {
+                                        skipForm.classList.add('hidden');
+                                    } else {
+                                        skipForm.classList.remove('hidden');
+                                    }
+                                }
+
                                 // Update title/description based on status
                                 const title = document.getElementById('processing-title');
                                 const desc = document.getElementById('processing-description');
@@ -278,13 +301,22 @@
                         Back to Dashboard
                     </a>
                     @if ($project?->repo_path || $analysis?->zip_path)
-                        <form action="{{ route('projects.retry', $project) }}" method="POST">
-                            @csrf
-                            <button type="submit"
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">
-                                Retry Analysis
-                            </button>
-                        </form>
+                        <div class="flex gap-3">
+                            <form action="{{ route('projects.resume', $project) }}" method="POST">
+                                @csrf
+                                <button type="submit"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">
+                                    Resume Analysis
+                                </button>
+                            </form>
+                            <form action="{{ route('projects.retry', $project) }}" method="POST">
+                                @csrf
+                                <button type="submit"
+                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition">
+                                    Full Retry
+                                </button>
+                            </form>
+                        </div>
                     @endif
                 </div>
             </div>
