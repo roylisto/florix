@@ -173,7 +173,14 @@ class AnalyzeRepositoryJob implements ShouldQueue
                     str_contains($path, 'service') ||
                     str_contains($path, 'blade.php');
             });
-            $this->logStep("Selected " . count($importantFiles) . " core files for deep analysis.");
+
+            // If no core files found OR the project is very small, take all files
+            if (empty($importantFiles) || count($structure) <= 5) {
+                $importantFiles = $structure;
+                $this->logStep("Project is small or has no obvious core files. Including all " . count($importantFiles) . " files for analysis.");
+            } else {
+                $this->logStep("Selected " . count($importantFiles) . " core files for deep analysis.");
+            }
 
             // Sort by priority (Controllers/Routes > Models > Views)
             usort($importantFiles, function ($a, $b) {
@@ -357,11 +364,12 @@ class AnalyzeRepositoryJob implements ShouldQueue
         $fileList = "";
         foreach ($files as $file) {
             $methods = implode(', ', array_column($file['methods'] ?? [], 'name'));
-            $fileList .= "FILE: {$file['path']}\nMETHODS: {$methods}\n---\n";
+            $summaryHint = $file['summary'] ?? '';
+            $fileList .= "FILE: {$file['path']}\nMETHODS: {$methods}\nCODE HINT: {$summaryHint}\n---\n";
         }
 
         return <<<PROMPT
-Task: Provide a ONE SENTENCE business summary for each file below.
+Task: Provide a ONE SENTENCE business summary for each file below based on its methods and code hint.
 Format: "path: summary" (one per line)
 
 FILES:
@@ -389,47 +397,36 @@ PROMPT;
             $summaryList .= "- {$item['path']}: {$item['summary']}\n";
         }
 
-        $structureJson = json_encode($fullStructureMap, JSON_PRETTY_PRINT);
+        $structureJson = json_encode($fullStructureMap);
 
         return <<<PROMPT
-You are a senior product manager explaining a software project to a non-technical client.
-I have provided two sets of data:
-1. FULL PROJECT STRUCTURE: A map of all files, classes, and methods in the project to give you context on the project's scale.
-2. CORE FILE SUMMARIES: Detailed one-sentence business summaries for the most important files.
+Task: Summarize the following project in plain English for a non-technical user.
 
-CRITICAL INSTRUCTION: You MUST include a DETAILED MERMAID DIAGRAM section at the end. This is the most important part of your report.
-The diagram MUST reflect the actual business logic of the project based on the summaries and structure provided below.
+DATA:
+- Full Structure: {$structureJson}
+- File Summaries: {$summaryList}
 
 RULES:
-- Do NOT mention code, technical jargon, or file names in the final output (except for the Mermaid diagram logic).
-- Use simple business language.
-- Focus on what the system does from a user perspective.
+- Do NOT repeat these instructions.
+- Do NOT invent features (e.g., no "Customer Insights" unless it's in the data).
+- Use ONLY the tags below.
 
-FULL PROJECT STRUCTURE:
-{$structureJson}
+EXAMPLE OUTPUT (for a simple script):
+[FEATURES]
+- Outputs a greeting message.
+- Allows user to set custom text.
 
-CORE FILE SUMMARIES:
-{$summaryList}
+[UI]
+Command line or browser text output.
 
-OUTPUT FORMAT:
-(Your response must follow this EXACT structure)
+[FLOW]
+User provides a message -> System prints it.
 
-FEATURES
-- Bullet list of high-level features.
-
-WHAT USER SEES
-- Describe the user interface (e.g., "A dashboard with statistics").
-
-USER FLOW
-- Step-by-step: User does X → System does Y.
-
-MERMAID DIAGRAM
-(MANDATORY: Provide ONLY the raw Mermaid code. Do NOT use markdown code blocks like ```mermaid. Start directly with 'graph TD', 'graph LR', 'flowchart TD', or 'flowchart LR'. Ensure the diagram is complex and shows multiple paths, decision points, and the full end-to-end user journey as represented by the file summaries)
+[DIAGRAM]
 graph TD
-A[User action] --> B[System response]
-B --> C{Decision}
-C -->|Path 1| D[Result 1]
-C -->|Path 2| E[Result 2]
+A[User Input] --> B[Display Text]
+
+RESPONSE:
 PROMPT;
     }
 
