@@ -202,6 +202,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
             $fileSummaries = $this->analysis->file_summaries ?? [];
             $summarizedPaths = array_column($fileSummaries, 'path');
+            $this->logStep("Found " . count($fileSummaries) . " existing file summaries.");
 
             // Filter out already summarized files
             $filesToSummarize = array_filter($importantFiles, function ($file) use ($summarizedPaths) {
@@ -400,33 +401,25 @@ PROMPT;
         $structureJson = json_encode($fullStructureMap);
 
         return <<<PROMPT
-Task: Summarize the following project in plain English for a non-technical user.
+Instructions: Analyze the project data and respond using ONLY the tags below.
+Rules: No conversational filler. No technical jargon. Describe exactly what is in the data.
 
-DATA:
-- Full Structure: {$structureJson}
-- File Summaries: {$summaryList}
+[DATA]
+Structure: {$structureJson}
+Summaries: {$summaryList}
 
-RULES:
-- Do NOT repeat these instructions.
-- Do NOT invent features (e.g., no "Customer Insights" unless it's in the data).
-- Use ONLY the tags below.
-
-EXAMPLE OUTPUT (for a simple script):
 [FEATURES]
-- Outputs a greeting message.
-- Allows user to set custom text.
+(List 3-5 features)
 
 [UI]
-Command line or browser text output.
+(Description of user interface)
 
 [FLOW]
-User provides a message -> System prints it.
+(User journey steps)
 
 [DIAGRAM]
 graph TD
-A[User Input] --> B[Display Text]
-
-RESPONSE:
+(Mermaid code here)
 PROMPT;
     }
 

@@ -397,30 +397,30 @@
                     $flow = isset($flowMatch[1]) ? trim($flowMatch[1]) : '';
 
                     // Extract mermaid diagram
-                    // First try specific headers, then fall back to searching for graph/flowchart anywhere
+                    // Try to find graph TD or flowchart TD anywhere in the output
                     preg_match(
-                        '/(?:\[DIAGRAM\]|MERMAID DIAGRAM|\[MERMAID DIAGRAM\])[:\s]*.*?((?:graph|flowchart)\s+(?:TD|LR|TB|BT)[\s\S]*)/si',
+                        '/((?:graph|flowchart)\s+(?:TD|LR|TB|BT)[\s\S]*)/si',
                         $output,
                         $mermaidMatch,
                     );
                     $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
 
-                    if (!$mermaid) {
-                        preg_match('/((?:graph|flowchart)\s+(?:TD|LR|TB|BT)[\s\S]*)/si', $output, $mermaidMatch);
-                        $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
-                    }
-
                     // Clean up potential instruction leaks (e.g., if AI echoes back parts of the prompt)
                     $cleanOutput = function ($text) {
+                        // Remove the diagram from the text sections if it's there
+                        $text = preg_replace('/(?:graph|flowchart)\s+(?:TD|LR|TB|BT)[\s\S]*/si', '', $text);
+                        
                         $text = preg_replace('/STRICT (?:CONSTRAINTS|RULES).*?\n/si', '', $text);
                         $text = preg_replace('/REPORT STRUCTURE.*?\n/si', '', $text);
                         $text = preg_replace('/RESPONSE FORMAT.*?\n/si', '', $text);
                         $text = preg_replace('/Role:.*?\n/si', '', $text);
                         $text = preg_replace('/Objective:.*?\n/si', '', $text);
                         $text = preg_replace('/Task:.*?\n/si', '', $text);
-                        $text = preg_replace('/EXAMPLE OUTPUT.*?\n/si', '', $text);
                         $text = preg_replace('/DATASET \d:.*?\n/si', '', $text);
                         $text = preg_replace('/RULES:.*?\n/si', '', $text);
+                        $text = preg_replace('/Instructions:.*?\n/si', '', $text);
+                        $text = preg_replace('/\[DATA\].*?\[/si', '[', $text);
+                        
                         // Clean up generic instructions sometimes repeated by LLM
                         $text = preg_replace('/\[List actual features.*?\]/si', '', $text);
                         $text = preg_replace('/\[Describe the UI.*?\]/si', '', $text);
@@ -428,20 +428,23 @@
                         $text = preg_replace('/\(List 3-5 high-level features\)/si', '', $text);
                         $text = preg_replace('/\(What the user sees\/outputs\)/si', '', $text);
                         $text = preg_replace('/\(Step-by-step user journey\)/si', '', $text);
+                        $text = preg_replace('/\(List 3-5 features\)/si', '', $text);
+                        $text = preg_replace('/\(Description of user interface\)/si', '', $text);
+                        $text = preg_replace('/\(User journey steps\)/si', '', $text);
                         $text = preg_replace('/- Feature \d/si', '', $text);
                         $text = preg_replace('/Step \d:.*?\n/si', '', $text);
                         $text = preg_replace('/Description of the interface\./si', '', $text);
-                        // Specific for Cowsay script example cleanup
-                        $text = preg_replace('/- Outputs a greeting message\./si', '', $text);
-                        $text = preg_replace('/- Allows user to set custom text\./si', '', $text);
-                        $text = preg_replace('/Command line or browser text output\./si', '', $text);
-                        $text = preg_replace('/User provides a message -> System prints it\./si', '', $text);
                         return trim($text);
                     };
 
                     $features = $cleanOutput($features);
                     $ui = $cleanOutput($ui);
                     $flow = $cleanOutput($flow);
+
+                    // FALLBACK: If AI didn't use tags, show the entire output in "Core Features"
+                    if (empty($features) && empty($ui) && empty($flow)) {
+                        $features = $cleanOutput($output);
+                    }
 
                     // Clean up potential markdown code blocks that AI might still include
                     if ($mermaid) {
