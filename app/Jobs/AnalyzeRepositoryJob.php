@@ -27,16 +27,18 @@ class AnalyzeRepositoryJob implements ShouldQueue
     public Analysis $analysis;
     public ?string $zipPath;
     public ?string $localPath;
+    public array $targets;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Project $project, Analysis $analysis, ?string $zipPath = null, ?string $localPath = null)
+    public function __construct(Project $project, Analysis $analysis, ?string $zipPath = null, ?string $localPath = null, array $targets = ['all'])
     {
         $this->project = $project;
         $this->analysis = $analysis;
         $this->zipPath = $zipPath;
         $this->localPath = $localPath;
+        $this->targets = $targets;
     }
 
     /**
@@ -270,32 +272,60 @@ class AnalyzeRepositoryJob implements ShouldQueue
             $commonContext = "Context:\nStructure: " . json_encode($fullStructureMap) . "\nSummaries: " . $summaryList;
 
             // 3.1 Features
-            $this->logStep('Analyzing core features...');
-            $featuresPrompt = "Task: List 3-5 high-level business features of this project.\n" . $commonContext . "\n\nFormat: Bullet points.\nNo chatter.";
-            $features = $llm->generate($featuresPrompt, null, ['num_predict' => 500]);
-            $this->analysis->update(['features_content' => trim($features)]);
+            if (in_array('all', $this->targets) || in_array('features', $this->targets)) {
+                $this->logStep('Analyzing core features...');
+                $featuresPrompt = "Task: List 3-5 high-level business features of this project.\n" . $commonContext . "\n\nFormat: Bullet points.\nNo chatter.";
+                $features = $llm->generate($featuresPrompt, null, ['num_predict' => 500]);
+                $this->analysis->update(['features_content' => trim($features)]);
+            } else {
+                $features = $this->analysis->features_content;
+            }
 
             // 3.2 UI
-            $this->logStep('Analyzing user interface...');
-            $uiPrompt = "Task: Describe what the user sees or the output format of this project.\n" . $commonContext . "\n\nFormat: Plain English paragraph.\nNo chatter.";
-            $ui = $llm->generate($uiPrompt, null, ['num_predict' => 500]);
-            $this->analysis->update(['ui_content' => trim($ui)]);
+            if (in_array('all', $this->targets) || in_array('ui', $this->targets)) {
+                $this->logStep('Analyzing user interface...');
+                $uiPrompt = "Task: Describe what the user sees or the output format of this project.\n" . $commonContext . "\n\nFormat: Plain English paragraph.\nNo chatter.";
+                $ui = $llm->generate($uiPrompt, null, ['num_predict' => 500]);
+                $this->analysis->update(['ui_content' => trim($ui)]);
+            } else {
+                $ui = $this->analysis->ui_content;
+            }
 
             // 3.3 Flow
-            $this->logStep('Analyzing user journey...');
-            $flowPrompt = "Task: Describe the step-by-step user journey or logic flow of this project.\n" . $commonContext . "\n\nFormat: Numbered steps.\nNo chatter.";
-            $flow = $llm->generate($flowPrompt, null, ['num_predict' => 500]);
-            $this->analysis->update(['flow_content' => trim($flow)]);
+            if (in_array('all', $this->targets) || in_array('flow', $this->targets)) {
+                $this->logStep('Analyzing user journey...');
+                $flowPrompt = "Task: Describe the step-by-step user journey or logic flow of this project.\n" . $commonContext . "\n\nFormat: Numbered steps.\nNo chatter.";
+                $flow = $llm->generate($flowPrompt, null, ['num_predict' => 500]);
+                $this->analysis->update(['flow_content' => trim($flow)]);
+            } else {
+                $flow = $this->analysis->flow_content;
+            }
 
             // 3.4 Mermaid
-            $this->logStep('Generating process flowchart...');
-            $mermaidPrompt = "Task: Generate a Mermaid.js 'graph TD' diagram for this project.\n" . $commonContext . "\n\nFormat: ONLY raw Mermaid code. No backticks.\nNo chatter.";
-            $mermaid = $llm->generate($mermaidPrompt, null, ['num_predict' => 1000]);
-            $this->analysis->update(['mermaid_content' => trim($mermaid)]);
+            if (in_array('all', $this->targets) || in_array('mermaid', $this->targets)) {
+                $this->logStep('Generating process flowchart...');
+                $mermaidPrompt = "Task: Generate a Mermaid.js 'graph TD' diagram for this project.\n" .
+                    $commonContext .
+                    "\n\nRULES:\n" .
+                    "1. Use ONLY simple alphanumeric characters in labels.\n" .
+                    "2. Use [ ] for all nodes. No { } or ( ).\n" .
+                    "3. No complex code like PHP variables or arrays inside labels.\n" .
+                    "4. Format: ONLY raw Mermaid code. No backticks.\n" .
+                    "No chatter.";
+                $mermaid = $llm->generate($mermaidPrompt, null, ['num_predict' => 1000]);
+                $this->analysis->update(['mermaid_content' => trim($mermaid)]);
+            } else {
+                $mermaid = $this->analysis->mermaid_content;
+            }
 
             // Keep llm_output for compatibility (concatenated)
             $llmOutput = "[FEATURES]\n{$features}\n\n[UI]\n{$ui}\n\n[FLOW]\n{$flow}\n\n[DIAGRAM]\n{$mermaid}";
-            $this->analysis->update(['llm_output' => $llmOutput]);
+
+            $this->analysis->update([
+                'llm_output' => $llmOutput,
+                'status' => 'completed',
+                'progress_message' => 'Analysis completed successfully.'
+            ]);
 
             $this->logStep('Final analysis completed.');
 

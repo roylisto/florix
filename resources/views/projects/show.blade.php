@@ -1,58 +1,109 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="max-w-4xl mx-auto">
-        <div class="mb-8 flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+    <div class="space-y-8">
+        <div class="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div class="flex-1 min-w-0">
-                <div class="flex flex-wrap items-center gap-3 mb-3">
+                <div class="flex flex-wrap items-center gap-3 mb-2">
                     <h1 class="text-3xl font-bold text-gray-900 break-words">{{ $project->name }}</h1>
                     @php
                         $statusClasses = match ($analysis?->status) {
-                            'completed' => 'bg-green-100 text-green-800',
-                            'processing', 'generating_explanation' => 'bg-blue-100 text-blue-800',
-                            'failed' => 'bg-red-100 text-red-800',
-                            default => 'bg-gray-100 text-gray-800',
+                            'completed' => 'bg-green-100 text-green-800 border-green-200',
+                            'processing', 'generating_explanation' => 'bg-blue-100 text-blue-800 border-blue-200',
+                            'failed' => 'bg-red-100 text-red-800 border-red-200',
+                            default => 'bg-gray-100 text-gray-800 border-gray-200',
                         };
                     @endphp
                     <span id="status-badge"
-                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium shrink-0 {{ $statusClasses }}">
+                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border {{ $statusClasses }}">
                         {{ ucfirst(str_replace('_', ' ', $analysis?->status ?? 'pending')) }}
                     </span>
                 </div>
-                <a href="{{ route('projects.index') }}"
-                    class="text-sm text-gray-500 hover:text-green-600 font-medium inline-flex items-center transition py-1 px-2 -ml-2 rounded-lg hover:bg-gray-100">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Dashboard
-                </a>
+                <div class="flex items-center text-sm text-gray-500">
+                    <a href="{{ route('projects.index') }}" class="hover:text-green-600 flex items-center transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Projects
+                    </a>
+                    <span class="mx-2">/</span>
+                    <span class="text-gray-900 font-medium">{{ $project->name }}</span>
+                </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-3 shrink-0 lg:mt-1">
                 @if ($analysis?->extracted_path)
                     <a href="{{ route('projects.browse', $project) }}"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm whitespace-nowrap">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center shadow-md hover:shadow-lg whitespace-nowrap gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
-                        Browse Source Code
+                        Browse Code
                     </a>
                 @endif
 
-                @if ($analysis?->status === 'completed')
-                    <form action="{{ route('projects.regenerate', $project) }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit"
-                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm whitespace-nowrap">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                @if ($analysis?->status === 'completed' || $analysis?->status === 'failed')
+                    <div class="relative inline-block text-left">
+                        <button type="button"
+                            class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center shadow-md hover:shadow-lg whitespace-nowrap gap-2"
+                            id="regen-menu-button" aria-expanded="false" aria-haspopup="true">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            Re-generate
+                            <span>Re-generate</span>
+                            <svg class="ml-1 h-4 w-4 text-green-200" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                                    clip-rule="evenodd" />
+                            </svg>
                         </button>
-                    </form>
+
+                        <div id="regen-dropdown"
+                            class="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none hidden border border-gray-100 overflow-hidden"
+                            role="menu" aria-orientation="vertical" aria-labelledby="regen-menu-button" tabindex="-1">
+                            <div class="py-1" role="none">
+                                <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
+                                    @csrf
+                                    <input type="hidden" name="targets[]" value="all">
+                                    <button type="submit"
+                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-semibold w-full text-left transition-colors"
+                                        role="menuitem">Full Analysis (All)</button>
+                                </form>
+                                <div class="border-t border-gray-100"></div>
+                                <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
+                                    @csrf
+                                    <input type="hidden" name="targets[]" value="features">
+                                    <button type="submit"
+                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        role="menuitem">Core Features only</button>
+                                </form>
+                                <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
+                                    @csrf
+                                    <input type="hidden" name="targets[]" value="ui">
+                                    <button type="submit"
+                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        role="menuitem">User Interface only</button>
+                                </form>
+                                <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
+                                    @csrf
+                                    <input type="hidden" name="targets[]" value="flow">
+                                    <button type="submit"
+                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        role="menuitem">User Journey only</button>
+                                </form>
+                                <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
+                                    @csrf
+                                    <input type="hidden" name="targets[]" value="mermaid">
+                                    <button type="submit"
+                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        role="menuitem">Process Flowchart only</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 @endif
 
                 <form action="{{ route('projects.destroy', $project) }}" method="POST" class="inline"
@@ -60,7 +111,7 @@
                     @csrf
                     @method('DELETE')
                     <button type="submit"
-                        class="text-red-600 hover:text-red-800 p-2 rounded-lg border border-red-200 hover:border-red-400 transition bg-white shadow-sm"
+                        class="text-red-500 hover:text-red-700 p-2.5 rounded-xl border border-red-100 hover:border-red-200 transition-all bg-white shadow-sm hover:shadow-md hover:bg-red-50"
                         title="Delete Project">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -75,17 +126,22 @@
             $analysis?->status === 'pending' ||
                 $analysis?->status === 'processing' ||
                 $analysis?->status === 'generating_explanation')
-            <div id="processing-view" class="bg-white rounded-xl shadow-md p-12 text-center">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mb-4">
+            <div id="processing-view" class="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-100">
+                <div class="relative inline-block mb-8">
+                    <div class="absolute inset-0 animate-ping rounded-full bg-green-100 opacity-75"></div>
+                    <div
+                        class="relative rounded-full h-16 w-16 border-4 border-green-600 border-t-transparent animate-spin">
+                    </div>
                 </div>
-                <h2 id="processing-title" class="text-xl font-bold text-gray-800 mb-2">
+
+                <h2 id="processing-title" class="text-2xl font-bold text-gray-900 mb-3">
                     @if ($analysis?->status === 'generating_explanation')
                         Generating AI Explanation...
                     @else
                         Analyzing Repository...
                     @endif
                 </h2>
-                <p id="processing-description" class="text-gray-500">
+                <p id="processing-description" class="text-gray-600 max-w-lg mx-auto leading-relaxed">
                     @if ($analysis?->status === 'generating_explanation')
                         The AI is now processing the parsed data to generate a business-friendly explanation. This step can
                         take a few minutes depending on the repository size.
@@ -95,37 +151,35 @@
                 </p>
 
                 <div id="progress-container"
-                    class="mt-4 {{ $analysis?->progress_message ? '' : 'hidden' }} flex items-center justify-center space-x-2">
+                    class="mt-8 py-3 px-6 bg-green-50 rounded-full inline-flex items-center space-x-3 border border-green-100 {{ $analysis?->progress_message ? '' : 'hidden' }}">
                     <div class="flex space-x-1">
-                        <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0s">
-                        </div>
-                        <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s">
-                        </div>
-                        <div class="h-1.5 w-1.5 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.4s">
-                        </div>
+                        <div class="h-2 w-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                        <div class="h-2 w-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="h-2 w-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
                     </div>
                     <span id="progress-message"
-                        class="text-sm font-medium text-green-700 italic">{{ $analysis?->progress_message }}</span>
+                        class="text-sm font-semibold text-green-800">{{ $analysis?->progress_message }}</span>
                 </div>
 
                 <!-- Debugging Tabs -->
-                <div class="mt-8 text-left">
-                    <div class="border-b border-gray-200 flex items-center justify-between">
+                <div class="mt-12 text-left bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                    <div class="border-b border-gray-200 flex items-center justify-between bg-white px-6">
                         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                             <button onclick="switchTab('logs')" id="tab-logs"
-                                class="border-green-500 text-green-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                                class="border-green-600 text-green-700 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition-all">
                                 Detailed Logs
                             </button>
                             <button onclick="switchTab('prompt')" id="tab-prompt"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all">
                                 AI Prompt
                             </button>
                         </nav>
-                        <div id="logs-actions" class="pb-2">
+                        <div id="logs-actions">
                             <button onclick="copyLogs()"
-                                class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] px-2 py-1 rounded border border-gray-300 transition flex items-center gap-1 shadow-sm font-medium"
+                                class="bg-white hover:bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-lg border border-gray-300 transition flex items-center gap-2 shadow-sm font-semibold"
                                 title="Copy logs to clipboard">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                 </svg>
@@ -134,25 +188,29 @@
                         </div>
                     </div>
 
-                    <div id="content-logs" class="mt-4">
+                    <div id="content-logs" class="p-4">
                         <pre id="realtime-logs"
-                            class="bg-gray-900 text-gray-300 p-4 rounded-lg text-xs font-mono overflow-auto max-h-64 border border-gray-800 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">{{ $analysis?->logs ?? 'Waiting for logs...' }}</pre>
+                            class="bg-gray-900 text-green-400 p-6 rounded-lg text-xs font-mono overflow-auto max-h-80 border border-gray-800 shadow-inner scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent leading-relaxed">{{ $analysis?->logs ?? 'Waiting for logs...' }}</pre>
                     </div>
 
-                    <div id="content-prompt" class="mt-4 hidden">
+                    <div id="content-prompt" class="p-4 hidden">
                         <pre id="realtime-prompt"
-                            class="bg-gray-900 text-blue-300 p-4 rounded-lg text-xs font-mono overflow-auto max-h-64 border border-gray-800">{{ $analysis?->prompt ?? 'Prompt will appear here...' }}</pre>
+                            class="bg-gray-900 text-blue-300 p-6 rounded-lg text-xs font-mono overflow-auto max-h-80 border border-gray-800 shadow-inner leading-relaxed">{{ $analysis?->prompt ?? 'Prompt will appear here...' }}</pre>
                     </div>
                 </div>
 
-                <div class="mt-8 flex items-center gap-4">
+                <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
                     @if (in_array($analysis?->status, ['pending', 'processing', 'generating_explanation']) && !$analysis?->stop_summarizing)
                         <form id="skip-analysis-form" action="{{ route('projects.stop_summarizing', $project) }}"
                             method="POST">
                             @csrf
                             <button type="submit"
-                                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm"
+                                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-3 rounded-xl transition shadow-md hover:shadow-lg flex items-center gap-2"
                                 onclick="return confirm('Stop summarizing remaining files and jump straight to the final analysis?')">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                </svg>
                                 Skip to Final Analysis
                             </button>
                         </form>
@@ -161,8 +219,12 @@
                     <form action="{{ route('projects.cancel', $project) }}" method="POST">
                         @csrf
                         <button type="submit"
-                            class="text-red-600 hover:text-red-800 text-sm font-medium border border-red-200 hover:border-red-400 px-4 py-2 rounded-lg transition"
+                            class="text-red-600 hover:text-red-700 text-sm font-bold border-2 border-red-100 hover:border-red-200 px-6 py-3 rounded-xl transition bg-white hover:bg-red-50 flex items-center gap-2"
                             onclick="return confirm('Are you sure you want to cancel the current analysis?')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                             Cancel Processing
                         </button>
                     </form>
@@ -184,6 +246,21 @@
                         }).catch(err => {
                             console.error('Failed to copy logs: ', err);
                             alert('Could not copy logs to clipboard.');
+                        });
+                    }
+
+                    function copyLogsFromCompleted() {
+                        const logs = document.getElementById('completed-logs').innerText;
+                        navigator.clipboard.writeText(logs).then(() => {
+                            const btn = document.querySelector('button[onclick="copyLogsFromCompleted()"]');
+                            const span = btn.querySelector('span');
+                            const originalText = span.innerText;
+                            span.innerText = 'Copied!';
+                            btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                            setTimeout(() => {
+                                span.innerText = originalText;
+                                btn.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                            }, 2000);
                         });
                     }
 
@@ -296,27 +373,32 @@
                 </script>
             </div>
         @elseif($analysis?->status === 'failed')
-            <div class="bg-white rounded-xl shadow-md p-8">
-                <div class="bg-red-100 text-red-600 p-4 rounded-full inline-block mb-4 mx-auto">
-                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <div class="bg-white rounded-2xl shadow-xl p-12 text-center border border-red-100 max-w-2xl mx-auto">
+                <div class="bg-red-100 text-red-600 p-4 rounded-full inline-block mb-6">
+                    <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Analysis Failed</h2>
-                <p class="text-gray-600 mb-6 text-center">Something went wrong during the analysis. Review the error
-                    details
-                    below.</p>
+                <h2 class="text-2xl font-bold text-gray-900 mb-3">Analysis Failed</h2>
+                <p class="text-gray-600 mb-8 leading-relaxed">Something went wrong during the analysis. Review the error
+                    details below to troubleshoot the issue.</p>
+
                 @if (!empty($analysis?->error))
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Error Message</h3>
-                        <pre class="whitespace-pre-wrap bg-red-50 text-red-800 p-4 rounded-lg border border-red-200 text-sm">{{ $analysis->error }}</pre>
+                    <div class="mb-8 text-left">
+                        <h3 class="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Error Message</h3>
+                        <div
+                            class="bg-red-50 text-red-800 p-6 rounded-xl border border-red-100 text-sm font-mono leading-relaxed shadow-inner">
+                            {{ $analysis->error }}
+                        </div>
                     </div>
                 @endif
+
                 @if (!empty($logTail))
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Recent Logs (tail)</h3>
+                    <div class="mb-8 text-left">
+                        <h3 class="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Recent Logs</h3>
                         <pre id="log-container"
-                            class="whitespace-pre-wrap bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-auto max-h-96">{{ $logTail }}</pre>
+                            class="whitespace-pre-wrap bg-gray-900 text-gray-100 p-6 rounded-xl text-xs overflow-auto max-h-80 shadow-xl leading-relaxed">{{ $logTail }}</pre>
                     </div>
                     <script>
                         document.addEventListener('DOMContentLoaded', function() {
@@ -327,24 +409,33 @@
                         });
                     </script>
                 @endif
-                <div class="flex items-center justify-between">
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
                     <a href="{{ route('projects.index') }}"
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition">
+                        class="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-xl transition-all">
                         Back to Dashboard
                     </a>
                     @if ($project?->repo_path || $analysis?->zip_path)
-                        <div class="flex gap-3">
-                            <form action="{{ route('projects.resume', $project) }}" method="POST">
+                        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                            <form action="{{ route('projects.resume', $project) }}" method="POST" class="w-full">
                                 @csrf
                                 <button type="submit"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">
-                                    Resume Analysis
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    </svg>
+                                    Resume
                                 </button>
                             </form>
-                            <form action="{{ route('projects.retry', $project) }}" method="POST">
+                            <form action="{{ route('projects.retry', $project) }}" method="POST" class="w-full">
                                 @csrf
                                 <button type="submit"
-                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition">
+                                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
                                     Full Retry
                                 </button>
                             </form>
@@ -354,18 +445,23 @@
             </div>
         @elseif($analysis?->status === 'completed')
             @if (str_starts_with($analysis->llm_output, 'NO_DATA_FOUND:'))
-                <div class="bg-white rounded-xl shadow-md p-12 text-center">
-                    <div class="bg-yellow-100 text-yellow-600 p-4 rounded-full inline-block mb-4 mx-auto">
-                        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="bg-white rounded-2xl shadow-xl p-16 text-center border border-yellow-100 max-w-2xl mx-auto">
+                    <div class="bg-yellow-100 text-yellow-600 p-5 rounded-full inline-block mb-6">
+                        <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-4">No Code Found</h2>
-                    <p class="text-gray-600 mb-6">{{ str_replace('NO_DATA_FOUND: ', '', $analysis->llm_output) }}</p>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">No Code Found</h2>
+                    <p class="text-gray-600 mb-10 text-lg leading-relaxed">
+                        {{ str_replace('NO_DATA_FOUND: ', '', $analysis->llm_output) }}</p>
                     <a href="{{ route('projects.index') }}"
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition">
-                        Try Again
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg hover:shadow-xl inline-flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Try Another Project
                     </a>
                 </div>
             @else
@@ -459,75 +555,111 @@ $cleanOutput = function ($text) {
                     }
                 @endphp
 
-                <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                    <div class="border-b border-gray-200">
-                        <nav class="flex -mb-px overflow-x-auto" aria-label="Tabs">
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                    <div class="bg-gray-50/50 border-b border-gray-200 px-4">
+                        <nav class="flex -mb-px overflow-x-auto no-scrollbar" aria-label="Tabs">
                             <button onclick="switchAnalysisTab('features')" id="tab-features"
-                                class="border-green-500 text-green-600 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
-                                Core Features
-                            </button>
-                            <button onclick="switchAnalysisTab('ui')" id="tab-ui"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
-                                What Your Users Will See
-                            </button>
-                            <button onclick="switchAnalysisTab('flow')" id="tab-flow"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
-                                The User Journey
-                            </button>
-                            @if ($mermaid)
-                                <button onclick="switchAnalysisTab('diagram')" id="tab-diagram"
-                                    class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
-                                    Process Flowchart
-                                </button>
-                            @endif
-                            <button onclick="switchAnalysisTab('raw')" id="tab-raw"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
-                                Raw Data
-                            </button>
-                        </nav>
-                    </div>
-
-                    <div class="p-8">
-                        <!-- Features Content -->
-                        <div id="content-features" class="analysis-tab-content">
-                            <h2 class="text-xl font-bold mb-6 text-green-700 flex items-center">
-                                <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                class="border-green-600 text-green-700 whitespace-nowrap py-5 px-6 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 Core Features
-                            </h2>
-                            <div class="prose max-w-none text-gray-700">
+                            </button>
+                            <button onclick="switchAnalysisTab('ui')" id="tab-ui"
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                User Interface
+                            </button>
+                            <button onclick="switchAnalysisTab('flow')" id="tab-flow"
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                                User Journey
+                            </button>
+                            @if ($mermaid)
+                                <button onclick="switchAnalysisTab('diagram')" id="tab-diagram"
+                                    class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    Flowchart
+                                </button>
+                            @endif
+                            <button onclick="switchAnalysisTab('raw')" id="tab-raw"
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                </svg>
+                                Raw Data
+                            </button>
+                            <button onclick="switchAnalysisTab('logs-completed')" id="tab-logs-completed"
+                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Logs
+                            </button>
+                        </nav>
+                    </div>
+
+                    <div class="p-10">
+                        <!-- Features Content -->
+                        <div id="content-features" class="analysis-tab-content">
+                            <div class="flex items-center gap-3 mb-8">
+                                <div class="p-2 bg-green-100 rounded-lg text-green-700">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900">Core Features</h2>
+                            </div>
+                            <div class="prose prose-green max-w-none text-gray-700 leading-relaxed text-lg">
                                 {!! nl2br(e($features)) !!}
                             </div>
                         </div>
 
                         <!-- What User Sees Content -->
                         <div id="content-ui" class="analysis-tab-content hidden">
-                            <h2 class="text-xl font-bold mb-6 text-blue-700 flex items-center">
-                                <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                                What Your Users Will See
-                            </h2>
-                            <div class="prose max-w-none text-gray-700">
+                            <div class="flex items-center gap-3 mb-8">
+                                <div class="p-2 bg-blue-100 rounded-lg text-blue-700">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900">What Your Users Will See</h2>
+                            </div>
+                            <div class="prose prose-blue max-w-none text-gray-700 leading-relaxed text-lg">
                                 {!! nl2br(e($ui)) !!}
                             </div>
                         </div>
 
                         <!-- User Flow Content -->
                         <div id="content-flow" class="analysis-tab-content hidden">
-                            <h2 class="text-xl font-bold mb-6 text-purple-700 flex items-center">
-                                <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                </svg>
-                                The User Journey
-                            </h2>
-                            <div class="prose max-w-none text-gray-700">
+                            <div class="flex items-center gap-3 mb-8">
+                                <div class="p-2 bg-purple-100 rounded-lg text-purple-700">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                    </svg>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900">The User Journey</h2>
+                            </div>
+                            <div class="prose prose-purple max-w-none text-gray-700 leading-relaxed text-lg">
                                 {!! nl2br(e($flow)) !!}
                             </div>
                         </div>
@@ -535,45 +667,40 @@ $cleanOutput = function ($text) {
                         <!-- Mermaid Diagram Content -->
                         @if ($mermaid)
                             <div id="content-diagram" class="analysis-tab-content hidden">
-                                <div class="flex items-center justify-between mb-6">
-                                    <h2 class="text-xl font-bold text-orange-700 flex items-center">
-                                        <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                        Process Flowchart
-                                    </h2>
-                                    <div class="flex space-x-2">
-                                        <button onclick="copyMermaidSource()"
-                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
-                                            title="Copy Mermaid Source">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
+                                <div class="flex items-center justify-between mb-8">
+                                    <div class="flex items-center gap-3">
+                                        <div class="p-2 bg-orange-100 rounded-lg text-orange-700">
+                                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                             </svg>
-                                        </button>
+                                        </div>
+                                        <h2 class="text-2xl font-bold text-gray-900">Process Flowchart</h2>
+                                    </div>
+                                    <div
+                                        class="flex items-center p-1 bg-gray-100 rounded-xl border border-gray-200 shadow-sm">
                                         <button onclick="zoomIn()"
-                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
                                             title="Zoom In">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                                    d="M12 4v16m8-8H4" />
                                             </svg>
                                         </button>
                                         <button onclick="zoomOut()"
-                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
                                             title="Zoom Out">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                                                    d="M20 12H4" />
                                             </svg>
                                         </button>
+                                        <div class="w-px h-4 bg-gray-300 mx-1"></div>
                                         <button onclick="resetZoom()"
-                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
                                             title="Reset Zoom">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -582,7 +709,7 @@ $cleanOutput = function ($text) {
                                             </svg>
                                         </button>
                                         <button onclick="toggleFullscreen()"
-                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
                                             title="Toggle Fullscreen">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -593,8 +720,8 @@ $cleanOutput = function ($text) {
                                     </div>
                                 </div>
                                 <div id="diagram-container"
-                                    class="bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative"
-                                    style="height: 500px;">
+                                    class="bg-gray-50/50 rounded-2xl overflow-hidden border border-gray-200 relative shadow-inner"
+                                    style="height: 600px;">
                                     <div id="mermaid-wrapper" class="w-full h-full p-4 flex items-center justify-center">
                                         <div id="mermaid-graph-source" class="hidden">{{ $mermaid }}</div>
                                         <div id="mermaid-output" class="w-full h-full flex items-center justify-center">
@@ -607,20 +734,22 @@ $cleanOutput = function ($text) {
 
                         <!-- Raw Data Content -->
                         <div id="content-raw" class="analysis-tab-content hidden">
-                            <div class="space-y-6">
+                            <div class="space-y-10">
                                 <div>
-                                    <div class="flex justify-between items-center mb-3">
-                                        <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            Full AI Output
-                                        </h3>
+                                    <div class="flex justify-between items-center mb-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="p-2 bg-gray-100 rounded-lg text-gray-700">
+                                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                                    stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                            <h3 class="text-xl font-bold text-gray-900">Full AI Output</h3>
+                                        </div>
                                         <button onclick="copyRawData()"
-                                            class="bg-white hover:bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-md border border-gray-300 transition flex items-center gap-1.5 shadow-sm font-medium">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                            class="bg-white hover:bg-gray-50 text-gray-700 text-sm px-4 py-2 rounded-xl border border-gray-300 transition flex items-center gap-2 shadow-sm font-bold">
+                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -629,25 +758,28 @@ $cleanOutput = function ($text) {
                                         </button>
                                     </div>
                                     <div
-                                        class="bg-gray-50 rounded-lg p-6 border border-gray-200 overflow-auto max-h-[500px]">
-                                        <pre id="raw-llm-output" class="text-sm text-gray-700 whitespace-pre-wrap font-mono">{{ $analysis->llm_output }}</pre>
+                                        class="bg-gray-50 rounded-2xl p-8 border border-gray-200 overflow-auto max-h-[600px] shadow-inner">
+                                        <pre id="raw-llm-output" class="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">{{ $analysis->llm_output }}</pre>
                                     </div>
                                 </div>
 
                                 @if ($mermaid)
                                     <div>
-                                        <div class="flex justify-between items-center mb-3">
-                                            <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                                                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                                                    stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                                </svg>
-                                                Extracted Mermaid Source
-                                            </h3>
+                                        <div class="flex justify-between items-center mb-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="p-2 bg-gray-100 rounded-lg text-gray-700">
+                                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                                        stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-xl font-bold text-gray-900">Extracted Mermaid Source</h3>
+                                            </div>
                                             <button onclick="copyMermaidSource()"
-                                                class="bg-white hover:bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-md border border-gray-300 transition flex items-center gap-1.5 shadow-sm font-medium">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                class="bg-white hover:bg-gray-50 text-gray-700 text-sm px-4 py-2 rounded-xl border border-gray-300 transition flex items-center gap-2 shadow-sm font-bold">
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -655,11 +787,39 @@ $cleanOutput = function ($text) {
                                                 <span>Copy Source</span>
                                             </button>
                                         </div>
-                                        <div class="bg-gray-900 rounded-lg p-6 border border-gray-700">
-                                            <pre id="mermaid-source-display" class="text-sm text-green-400 whitespace-pre-wrap font-mono">{{ $mermaid }}</pre>
+                                        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-xl">
+                                            <pre id="mermaid-source-display" class="text-sm text-green-400 whitespace-pre-wrap font-mono leading-relaxed">{{ $mermaid }}</pre>
                                         </div>
                                     </div>
                                 @endif
+                            </div>
+                        </div>
+
+                        <!-- Detailed Logs Content -->
+                        <div id="content-logs-completed" class="analysis-tab-content hidden">
+                            <div class="flex justify-between items-center mb-8">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 bg-gray-100 rounded-lg text-gray-700">
+                                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <h2 class="text-2xl font-bold text-gray-900">Analysis Logs</h2>
+                                </div>
+                                <button onclick="copyLogsFromCompleted()"
+                                    class="bg-white hover:bg-gray-50 text-gray-700 text-sm px-4 py-2 rounded-xl border border-gray-300 transition flex items-center gap-2 shadow-sm font-bold">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                    <span>Copy Logs</span>
+                                </button>
+                            </div>
+                            <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-xl">
+                                <pre id="completed-logs"
+                                    class="text-xs text-green-400 font-mono whitespace-pre-wrap overflow-auto max-h-[600px] leading-relaxed">{{ $analysis->logs }}</pre>
                             </div>
                         </div>
                     </div>
@@ -747,11 +907,14 @@ $cleanOutput = function ($text) {
 
                                 // 3. Robust regex to quote all node labels and fix common punctuation
                                 // Handles [label], (label), {label}, ((label)), [[label]], etc.
-                                graphText = graphText.replace(/([A-Z0-9_-]+)?(\[+|\{+|\(+)(.+?)(\]+|\}+|\)+)/g, function(match, id,
+                                graphText = graphText.replace(/([A-Z0-9_-]+)?\s*(\[+|\{+|\(+)([\s\S]+?)(\]+|\}+|\)+)/g, function(
+                                    match, id,
                                     start, label, end) {
-                                    let cleanLabel = label.trim().replace(/\.+$/g, '').replace(/"/g, '#quot;');
+                                    let cleanLabel = label.trim()
+                                        .replace(/\.+$/g, '')
+                                        .replace(/"/g, '#quot;')
+                                        .replace(/[\[\](){}]/g, ''); // Remove nested brackets
                                     let nodeId = id || '';
-                                    // Use standard [ ] for the cleaned output to ensure compatibility
                                     return nodeId + '["' + cleanLabel + '"]';
                                 });
 
@@ -854,6 +1017,28 @@ $cleanOutput = function ($text) {
                             panZoomInstance.resize();
                             panZoomInstance.fit();
                             panZoomInstance.center();
+                        }
+                    });
+
+                    // Handle Re-generate dropdown toggle
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const regenBtn = document.getElementById('regen-menu-button');
+                        const regenDropdown = document.getElementById('regen-dropdown');
+
+                        if (regenBtn && regenDropdown) {
+                            regenBtn.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                const isExpanded = regenBtn.getAttribute('aria-expanded') === 'true';
+                                regenBtn.setAttribute('aria-expanded', !isExpanded);
+                                regenDropdown.classList.toggle('hidden');
+                            });
+
+                            document.addEventListener('click', function(e) {
+                                if (!regenBtn.contains(e.target) && !regenDropdown.contains(e.target)) {
+                                    regenBtn.setAttribute('aria-expanded', 'false');
+                                    regenDropdown.classList.add('hidden');
+                                }
+                            });
                         }
                     });
                 </script>

@@ -88,22 +88,35 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project);
     }
 
-    public function regenerate(Project $project)
+    public function regenerate(Project $requestProject, \Illuminate\Http\Request $request)
     {
+        $project = $requestProject;
         $analysis = $project->latestAnalysis;
         if (!$analysis || $analysis->status !== 'completed') {
             return back()->with('error', 'No completed analysis to re-generate.');
         }
 
-        $newAnalysis = Analysis::create([
+        $targets = $request->input('targets', ['all']);
+        
+        $newAnalysisData = [
             'project_id' => $project->id,
             'status' => 'pending',
             'parsed_data' => $analysis->parsed_data,
             'file_summaries' => $analysis->file_summaries,
             'extracted_path' => $analysis->extracted_path,
-        ]);
+        ];
 
-        AnalyzeRepositoryJob::dispatch($project, $newAnalysis, null, $project->repo_path);
+        // If not regenerating all, copy existing content for non-target sections
+        if (!in_array('all', $targets)) {
+            if (!in_array('features', $targets)) $newAnalysisData['features_content'] = $analysis->features_content;
+            if (!in_array('ui', $targets)) $newAnalysisData['ui_content'] = $analysis->ui_content;
+            if (!in_array('flow', $targets)) $newAnalysisData['flow_content'] = $analysis->flow_content;
+            if (!in_array('mermaid', $targets)) $newAnalysisData['mermaid_content'] = $analysis->mermaid_content;
+        }
+
+        $newAnalysis = Analysis::create($newAnalysisData);
+
+        AnalyzeRepositoryJob::dispatch($project, $newAnalysis, null, $project->repo_path, $targets);
 
         return redirect()->route('projects.show', $project);
     }
