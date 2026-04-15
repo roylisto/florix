@@ -529,7 +529,6 @@ if ($mermaid) {
     $mermaid = str_replace(['(', ')'], ['[', ']'], $mermaid);
     $mermaid = preg_replace('/([a-zA-Z0-9]+)\[(.*?)\]\}/', '$1["$2"]', $mermaid);
     $mermaid = preg_replace('/([a-zA-Z0-9]+)\{(.*?)\]/', '$1["$2"]', $mermaid);
-    $mermaid = preg_replace('/\|([^|]+)\|([^>]+)-->/', '-->|$1|', $mermaid);
     $mermaid = trim($mermaid);
 }
 
@@ -720,9 +719,9 @@ $cleanOutput = function ($text) {
                                     </div>
                                 </div>
                                 <div id="diagram-container"
-                                    class="bg-gray-50/50 rounded-2xl overflow-hidden border border-gray-200 relative shadow-inner"
-                                    style="height: 600px;">
-                                    <div id="mermaid-wrapper" class="w-full h-full p-4 flex items-center justify-center">
+                                    class="bg-white rounded-2xl overflow-hidden border border-gray-200 relative shadow-inner"
+                                    style="height: 600px; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 24px 24px;">
+                                    <div id="mermaid-wrapper" class="w-full h-full flex items-center justify-center">
                                         <div id="mermaid-graph-source" class="hidden">{{ $mermaid }}</div>
                                         <div id="mermaid-output" class="w-full h-full flex items-center justify-center">
                                             <!-- SVG will be injected here -->
@@ -867,7 +866,6 @@ $cleanOutput = function ($text) {
                         document.querySelectorAll('.analysis-tab-content').forEach(el => el.classList.add('hidden'));
                         // Reset all tab styles
                         document.querySelectorAll('[id^="tab-"]').forEach(el => {
-                            if (el.id.startsWith('tab-logs') || el.id.startsWith('tab-prompt')) return; // Ignore debug tabs
                             el.className =
                                 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
                         });
@@ -875,8 +873,11 @@ $cleanOutput = function ($text) {
                         // Show selected content
                         document.getElementById('content-' + tab).classList.remove('hidden');
                         // Set active tab style
-                        document.getElementById('tab-' + tab).className =
-                            'border-green-500 text-green-600 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
+                        const activeTab = document.getElementById('tab-' + tab);
+                        if (activeTab) {
+                            activeTab.className =
+                                'border-green-500 text-green-600 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
+                        }
 
                         // Initialize or refresh diagram if diagram tab is selected
                         if (tab === 'diagram') {
@@ -929,7 +930,21 @@ $cleanOutput = function ($text) {
                                 const {
                                     svg
                                 } = await mermaid.render('mermaid-svg-rendered', graphText);
-                                output.innerHTML = svg;
+
+                                // Add modern styling to the SVG
+                                let styledSvg = svg.replace('<style>', '<style>' +
+                                    '.node rect, .node circle, .node polygon, .node path { ' +
+                                    '   stroke-width: 2px !important; ' +
+                                    '   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05)); ' +
+                                    '   rx: 8px; ry: 8px; ' +
+                                    '} ' +
+                                    '.edgePath path { stroke-width: 1.5px !important; stroke: #94a3b8 !important; } ' +
+                                    '.edgeLabel { background-color: rgba(255, 255, 255, 0.8) !important; padding: 2px 4px !important; border-radius: 4px !important; } ' +
+                                    '.label { font-weight: 600 !important; color: #334155 !important; } ' +
+                                    '.cluster rect { fill: #f8fafc !important; stroke: #e2e8f0 !important; rx: 12px; ry: 12px; }'
+                                );
+
+                                output.innerHTML = styledSvg;
                                 mermaidRendered = true;
                                 setTimeout(initPanZoom, 100);
                             } catch (error) {

@@ -97,13 +97,14 @@ class ProjectController extends Controller
         }
 
         $targets = $request->input('targets', ['all']);
-        
+
         $newAnalysisData = [
             'project_id' => $project->id,
             'status' => 'pending',
             'parsed_data' => $analysis->parsed_data,
             'file_summaries' => $analysis->file_summaries,
             'extracted_path' => $analysis->extracted_path,
+            'zip_path' => $analysis->zip_path,
         ];
 
         // If not regenerating all, copy existing content for non-target sections

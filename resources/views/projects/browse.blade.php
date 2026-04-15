@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="max-w-6xl mx-auto">
-        <div class="mb-8 flex items-center justify-between">
-            <div>
+    <div class="space-y-8">
+        <div class="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="flex-1 min-w-0">
                 <h1 class="text-3xl font-bold text-gray-900">{{ $project->name }}</h1>
                 <nav class="flex mt-2 text-sm text-gray-500 font-medium" aria-label="Breadcrumb">
                     <ol class="inline-flex items-center space-x-1 md:space-x-3">

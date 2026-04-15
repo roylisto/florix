@@ -271,12 +271,15 @@ class AnalyzeRepositoryJob implements ShouldQueue
 
             $commonContext = "Context:\nStructure: " . json_encode($fullStructureMap) . "\nSummaries: " . $summaryList;
 
+            $updates = [];
+
             // 3.1 Features
             if (in_array('all', $this->targets) || in_array('features', $this->targets)) {
                 $this->logStep('Analyzing core features...');
                 $featuresPrompt = "Task: List 3-5 high-level business features of this project.\n" . $commonContext . "\n\nFormat: Bullet points.\nNo chatter.";
                 $features = $llm->generate($featuresPrompt, null, ['num_predict' => 500]);
-                $this->analysis->update(['features_content' => trim($features)]);
+                $features = trim($features);
+                $updates['features_content'] = $features;
             } else {
                 $features = $this->analysis->features_content;
             }
@@ -286,7 +289,8 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 $this->logStep('Analyzing user interface...');
                 $uiPrompt = "Task: Describe what the user sees or the output format of this project.\n" . $commonContext . "\n\nFormat: Plain English paragraph.\nNo chatter.";
                 $ui = $llm->generate($uiPrompt, null, ['num_predict' => 500]);
-                $this->analysis->update(['ui_content' => trim($ui)]);
+                $ui = trim($ui);
+                $updates['ui_content'] = $ui;
             } else {
                 $ui = $this->analysis->ui_content;
             }
@@ -296,7 +300,8 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 $this->logStep('Analyzing user journey...');
                 $flowPrompt = "Task: Describe the step-by-step user journey or logic flow of this project.\n" . $commonContext . "\n\nFormat: Numbered steps.\nNo chatter.";
                 $flow = $llm->generate($flowPrompt, null, ['num_predict' => 500]);
-                $this->analysis->update(['flow_content' => trim($flow)]);
+                $flow = trim($flow);
+                $updates['flow_content'] = $flow;
             } else {
                 $flow = $this->analysis->flow_content;
             }
@@ -304,51 +309,49 @@ class AnalyzeRepositoryJob implements ShouldQueue
             // 3.4 Mermaid
             if (in_array('all', $this->targets) || in_array('mermaid', $this->targets)) {
                 $this->logStep('Generating process flowchart...');
-                $mermaidPrompt = "Task: Generate a Mermaid.js 'graph TD' diagram for this project.\n" .
+                $mermaidPrompt = "Task: Generate a beautiful, complex Mermaid.js 'graph TD' diagram for this project.\n" .
                     $commonContext .
                     "\n\nRULES:\n" .
-                    "1. Use ONLY simple alphanumeric characters in labels.\n" .
-                    "2. Use [ ] for all nodes. No { } or ( ).\n" .
-                    "3. No complex code like PHP variables or arrays inside labels.\n" .
-                    "4. Format: ONLY raw Mermaid code. No backticks.\n" .
-                    "No chatter.";
+                    "1. Use subgraphs to group related logic (e.g., 'subgraph Frontend', 'subgraph Backend', 'subgraph Database').\n" .
+                    "2. Use different node shapes: [ ] for processes, { } for decisions, ([ ]) for start/end.\n" .
+                    "3. Use styling: 'style nodeName fill:#f9f,stroke:#333,stroke-width:4px'.\n" .
+                    "4. Use clear labels with arrows like '-->|user clicks|'.\n" .
+                    "5. Format: ONLY raw Mermaid code. No backticks.\n" .
+                    "Make it look professional and architectural. No chatter.";
                 $mermaid = $llm->generate($mermaidPrompt, null, ['num_predict' => 1000]);
-                $this->analysis->update(['mermaid_content' => trim($mermaid)]);
+                $mermaid = trim($mermaid);
+                $updates['mermaid_content'] = $mermaid;
             } else {
                 $mermaid = $this->analysis->mermaid_content;
             }
 
             // Keep llm_output for compatibility (concatenated)
             $llmOutput = "[FEATURES]\n{$features}\n\n[UI]\n{$ui}\n\n[FLOW]\n{$flow}\n\n[DIAGRAM]\n{$mermaid}";
+            $updates['llm_output'] = $llmOutput;
+            $updates['status'] = 'completed';
+            $updates['progress_message'] = 'Analysis completed successfully.';
 
-            $this->analysis->update([
-                'llm_output' => $llmOutput,
-                'status' => 'completed',
-                'progress_message' => 'Analysis completed successfully.'
-            ]);
+            $this->analysis->update($updates);
+            $this->analysis->refresh();
 
             $this->logStep('Final analysis completed.');
 
-            // Step 4: Save results (only if we parsed new data or if directory is missing)
+            // Step 4: Save results (only if we parsed new data OR the directory is in a temporary location)
             $projectDir = storage_path('app/projects/' . $this->project->id);
-            if (!empty($basePath) && File::exists($basePath)) {
-                $this->logStep('Step 4: Moving files to project directory...');
+            $isTempDir = str_contains($basePath, '/app/temp/');
+
+            if (!empty($basePath) && File::exists($basePath) && $isTempDir) {
+                $this->logStep('Step 4: Moving temporary files to project directory...');
                 if (File::exists($projectDir)) {
                     File::deleteDirectory($projectDir);
                 }
                 File::makeDirectory($projectDir, 0755, true);
                 File::copyDirectory($basePath, $projectDir);
+                $this->analysis->update(['extracted_path' => $projectDir]);
             } else {
-                $this->logStep('Step 4: Project files already in place (skipping move).');
+                $this->logStep('Step 4: Project files already in place or no new files to move.');
             }
-
-            $this->analysis->update([
-                'llm_output' => $llmOutput,
-                'status' => 'completed',
-                'progress_message' => 'Analysis completed.',
-                'extracted_path' => $projectDir,
-            ]);
-            $this->logStep('Analysis completed successfully. Files saved to project directory.');
+            $this->logStep('Analysis completed successfully.');
         } catch (\Exception $e) {
             $this->logStep('Analysis failed: ' . $e->getMessage());
             Log::error('Analysis failed: ' . $e->getMessage());
