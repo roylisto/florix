@@ -5,13 +5,18 @@
         <div class="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div class="flex-1 min-w-0">
                 <div class="flex flex-wrap items-center gap-3 mb-2">
-                    <h1 class="text-3xl font-bold text-gray-900 break-words">{{ $project->name }}</h1>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-dark-text break-words">{{ $project->name }}</h1>
                     @php
                         $statusClasses = match ($analysis?->status) {
-                            'completed' => 'bg-green-100 text-green-800 border-green-200',
-                            'processing', 'generating_explanation' => 'bg-blue-100 text-blue-800 border-blue-200',
-                            'failed' => 'bg-red-100 text-red-800 border-red-200',
-                            default => 'bg-gray-100 text-gray-800 border-gray-200',
+                            'completed'
+                                => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+                            'processing',
+                            'generating_explanation'
+                                => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+                            'failed'
+                                => 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+                            default
+                                => 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
                         };
                     @endphp
                     <span id="status-badge"
@@ -19,8 +24,9 @@
                         {{ ucfirst(str_replace('_', ' ', $analysis?->status ?? 'pending')) }}
                     </span>
                 </div>
-                <div class="flex items-center text-sm text-gray-500">
-                    <a href="{{ route('projects.index') }}" class="hover:text-green-600 flex items-center transition-colors">
+                <div class="flex items-center text-sm text-gray-500 dark:text-dark-muted">
+                    <a href="{{ route('projects.index') }}"
+                        class="hover:text-green-600 dark:hover:text-green-500 flex items-center transition-colors">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -28,7 +34,7 @@
                         Projects
                     </a>
                     <span class="mx-2">/</span>
-                    <span class="text-gray-900 font-medium">{{ $project->name }}</span>
+                    <span class="text-gray-900 dark:text-dark-text font-medium">{{ $project->name }}</span>
                 </div>
             </div>
 
@@ -62,43 +68,43 @@
                         </button>
 
                         <div id="regen-dropdown"
-                            class="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none hidden border border-gray-100 overflow-hidden"
+                            class="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-xl bg-white dark:bg-dark-card shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none hidden border border-gray-100 dark:border-dark-border overflow-hidden"
                             role="menu" aria-orientation="vertical" aria-labelledby="regen-menu-button" tabindex="-1">
                             <div class="py-1" role="none">
                                 <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
                                     @csrf
                                     <input type="hidden" name="targets[]" value="all">
                                     <button type="submit"
-                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-semibold w-full text-left transition-colors"
+                                        class="text-gray-700 dark:text-dark-text block px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 font-semibold w-full text-left transition-colors"
                                         role="menuitem">Full Analysis (All)</button>
                                 </form>
-                                <div class="border-t border-gray-100"></div>
+                                <div class="border-t border-gray-100 dark:border-dark-border"></div>
                                 <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
                                     @csrf
                                     <input type="hidden" name="targets[]" value="features">
                                     <button type="submit"
-                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        class="text-gray-700 dark:text-dark-text block px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 font-medium w-full text-left transition-colors"
                                         role="menuitem">Core Features only</button>
                                 </form>
                                 <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
                                     @csrf
                                     <input type="hidden" name="targets[]" value="ui">
                                     <button type="submit"
-                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        class="text-gray-700 dark:text-dark-text block px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 font-medium w-full text-left transition-colors"
                                         role="menuitem">User Interface only</button>
                                 </form>
                                 <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
                                     @csrf
                                     <input type="hidden" name="targets[]" value="flow">
                                     <button type="submit"
-                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        class="text-gray-700 dark:text-dark-text block px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 font-medium w-full text-left transition-colors"
                                         role="menuitem">User Journey only</button>
                                 </form>
                                 <form action="{{ route('projects.regenerate', $project) }}" method="POST" role="none">
                                     @csrf
                                     <input type="hidden" name="targets[]" value="mermaid">
                                     <button type="submit"
-                                        class="text-gray-700 block px-4 py-3 text-sm hover:bg-gray-50 hover:text-green-600 font-medium w-full text-left transition-colors"
+                                        class="text-gray-700 dark:text-dark-text block px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 font-medium w-full text-left transition-colors"
                                         role="menuitem">Process Flowchart only</button>
                                 </form>
                             </div>
@@ -111,7 +117,7 @@
                     @csrf
                     @method('DELETE')
                     <button type="submit"
-                        class="text-red-500 hover:text-red-700 p-2.5 rounded-xl border border-red-100 hover:border-red-200 transition-all bg-white shadow-sm hover:shadow-md hover:bg-red-50"
+                        class="text-red-500 hover:text-red-700 p-2.5 rounded-xl border border-red-100 dark:border-red-900/30 hover:border-red-200 transition-all bg-white dark:bg-dark-card shadow-sm hover:shadow-md hover:bg-red-50 dark:hover:bg-red-900/20"
                         title="Delete Project">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -126,22 +132,25 @@
             $analysis?->status === 'pending' ||
                 $analysis?->status === 'processing' ||
                 $analysis?->status === 'generating_explanation')
-            <div id="processing-view" class="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-100">
+            <div id="processing-view"
+                class="bg-white dark:bg-dark-card rounded-xl shadow-lg p-12 text-center border border-gray-100 dark:border-dark-border transition-colors duration-200">
                 <div class="relative inline-block mb-8">
-                    <div class="absolute inset-0 animate-ping rounded-full bg-green-100 opacity-75"></div>
+                    <div class="absolute inset-0 animate-ping rounded-full bg-green-100 dark:bg-green-900/20 opacity-75">
+                    </div>
                     <div
-                        class="relative rounded-full h-16 w-16 border-4 border-green-600 border-t-transparent animate-spin">
+                        class="relative rounded-full h-16 w-16 border-4 border-green-600 dark:border-green-500 border-t-transparent animate-spin">
                     </div>
                 </div>
 
-                <h2 id="processing-title" class="text-2xl font-bold text-gray-900 mb-3">
+                <h2 id="processing-title" class="text-2xl font-bold text-gray-900 dark:text-dark-text mb-3">
                     @if ($analysis?->status === 'generating_explanation')
                         Generating AI Explanation...
                     @else
                         Analyzing Repository...
                     @endif
                 </h2>
-                <p id="processing-description" class="text-gray-600 max-w-lg mx-auto leading-relaxed">
+                <p id="processing-description"
+                    class="text-gray-600 dark:text-dark-muted max-w-lg mx-auto leading-relaxed">
                     @if ($analysis?->status === 'generating_explanation')
                         The AI is now processing the parsed data to generate a business-friendly explanation. This step can
                         take a few minutes depending on the repository size.
@@ -151,35 +160,40 @@
                 </p>
 
                 <div id="progress-container"
-                    class="mt-8 py-3 px-6 bg-green-50 rounded-full inline-flex items-center space-x-3 border border-green-100 {{ $analysis?->progress_message ? '' : 'hidden' }}">
+                    class="mt-8 py-3 px-6 bg-green-50 dark:bg-green-900/10 rounded-full inline-flex items-center space-x-3 border border-green-100 dark:border-green-900/30 {{ $analysis?->progress_message ? '' : 'hidden' }}">
                     <div class="flex space-x-1">
-                        <div class="h-2 w-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0s"></div>
-                        <div class="h-2 w-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                        <div class="h-2 w-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                        <div class="h-2 w-2 bg-green-600 dark:bg-green-500 rounded-full animate-bounce"
+                            style="animation-delay: 0s"></div>
+                        <div class="h-2 w-2 bg-green-600 dark:bg-green-500 rounded-full animate-bounce"
+                            style="animation-delay: 0.2s"></div>
+                        <div class="h-2 w-2 bg-green-600 dark:bg-green-500 rounded-full animate-bounce"
+                            style="animation-delay: 0.4s"></div>
                     </div>
                     <span id="progress-message"
-                        class="text-sm font-semibold text-green-800">{{ $analysis?->progress_message }}</span>
+                        class="text-sm font-semibold text-green-800 dark:text-green-400">{{ $analysis?->progress_message }}</span>
                 </div>
 
                 <!-- Debugging Tabs -->
-                <div class="mt-12 text-left bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-                    <div class="border-b border-gray-200 flex items-center justify-between bg-white px-6">
+                <div
+                    class="mt-12 text-left bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden transition-colors duration-200">
+                    <div
+                        class="border-b border-gray-200 dark:border-dark-border flex items-center justify-between bg-white dark:bg-dark-card px-6 transition-colors duration-200">
                         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                             <button onclick="switchTab('logs')" id="tab-logs"
-                                class="border-green-600 text-green-700 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition-all">
+                                class="border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition-all">
                                 Detailed Logs
                             </button>
                             <button onclick="switchTab('prompt')" id="tab-prompt"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all">
+                                class="border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all">
                                 AI Prompt
                             </button>
                         </nav>
                         <div id="logs-actions">
                             <button onclick="copyLogs()"
-                                class="bg-white hover:bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-lg border border-gray-300 transition flex items-center gap-2 shadow-sm font-semibold"
+                                class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-semibold"
                                 title="Copy logs to clipboard">
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                 </svg>
@@ -219,7 +233,7 @@
                     <form action="{{ route('projects.cancel', $project) }}" method="POST">
                         @csrf
                         <button type="submit"
-                            class="text-red-600 hover:text-red-700 text-sm font-bold border-2 border-red-100 hover:border-red-200 px-6 py-3 rounded-xl transition bg-white hover:bg-red-50 flex items-center gap-2"
+                            class="text-red-600 hover:text-red-700 text-sm font-bold border-2 border-red-100 dark:border-red-900/30 hover:border-red-200 px-6 py-3 rounded-xl transition bg-white dark:bg-dark-card hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                             onclick="return confirm('Are you sure you want to cancel the current analysis?')">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -554,11 +568,13 @@ $cleanOutput = function ($text) {
                     }
                 @endphp
 
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                    <div class="bg-gray-50/50 border-b border-gray-200 px-4">
+                <div
+                    class="bg-white dark:bg-dark-card rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-dark-border transition-colors duration-200">
+                    <div
+                        class="bg-gray-50/50 dark:bg-dark-bg/50 border-b border-gray-200 dark:border-dark-border px-4 transition-colors duration-200">
                         <nav class="flex -mb-px overflow-x-auto no-scrollbar" aria-label="Tabs">
                             <button onclick="switchAnalysisTab('features')" id="tab-features"
-                                class="border-green-600 text-green-700 whitespace-nowrap py-5 px-6 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                                class="border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 whitespace-nowrap py-5 px-6 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -566,7 +582,7 @@ $cleanOutput = function ($text) {
                                 Core Features
                             </button>
                             <button onclick="switchAnalysisTab('ui')" id="tab-ui"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                class="border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -576,7 +592,7 @@ $cleanOutput = function ($text) {
                                 User Interface
                             </button>
                             <button onclick="switchAnalysisTab('flow')" id="tab-flow"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                class="border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -585,7 +601,7 @@ $cleanOutput = function ($text) {
                             </button>
                             @if ($mermaid)
                                 <button onclick="switchAnalysisTab('diagram')" id="tab-diagram"
-                                    class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                    class="border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -594,7 +610,7 @@ $cleanOutput = function ($text) {
                                 </button>
                             @endif
                             <button onclick="switchAnalysisTab('raw')" id="tab-raw"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                class="border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -602,7 +618,7 @@ $cleanOutput = function ($text) {
                                 Raw Data
                             </button>
                             <button onclick="switchAnalysisTab('logs-completed')" id="tab-logs-completed"
-                                class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
+                                class="border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-5 px-6 border-b-2 font-semibold text-sm transition-all flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -616,15 +632,17 @@ $cleanOutput = function ($text) {
                         <!-- Features Content -->
                         <div id="content-features" class="analysis-tab-content">
                             <div class="flex items-center gap-3 mb-8">
-                                <div class="p-2 bg-green-100 rounded-lg text-green-700">
+                                <div
+                                    class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-700 dark:text-green-400">
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900">Core Features</h2>
+                                <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">Core Features</h2>
                             </div>
-                            <div class="prose prose-green max-w-none text-gray-700 leading-relaxed text-lg">
+                            <div
+                                class="prose prose-green dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
                                 {!! nl2br(e($features)) !!}
                             </div>
                         </div>
@@ -632,7 +650,8 @@ $cleanOutput = function ($text) {
                         <!-- What User Sees Content -->
                         <div id="content-ui" class="analysis-tab-content hidden">
                             <div class="flex items-center gap-3 mb-8">
-                                <div class="p-2 bg-blue-100 rounded-lg text-blue-700">
+                                <div
+                                    class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-700 dark:text-blue-400">
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -640,9 +659,11 @@ $cleanOutput = function ($text) {
                                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900">What Your Users Will See</h2>
+                                <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">What Your Users Will See
+                                </h2>
                             </div>
-                            <div class="prose prose-blue max-w-none text-gray-700 leading-relaxed text-lg">
+                            <div
+                                class="prose prose-blue dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
                                 {!! nl2br(e($ui)) !!}
                             </div>
                         </div>
@@ -650,15 +671,17 @@ $cleanOutput = function ($text) {
                         <!-- User Flow Content -->
                         <div id="content-flow" class="analysis-tab-content hidden">
                             <div class="flex items-center gap-3 mb-8">
-                                <div class="p-2 bg-purple-100 rounded-lg text-purple-700">
+                                <div
+                                    class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-700 dark:text-purple-400">
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                     </svg>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900">The User Journey</h2>
+                                <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">The User Journey</h2>
                             </div>
-                            <div class="prose prose-purple max-w-none text-gray-700 leading-relaxed text-lg">
+                            <div
+                                class="prose prose-purple dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
                                 {!! nl2br(e($flow)) !!}
                             </div>
                         </div>
@@ -719,8 +742,18 @@ $cleanOutput = function ($text) {
                                     </div>
                                 </div>
                                 <div id="diagram-container"
-                                    class="bg-white rounded-2xl overflow-hidden border border-gray-200 relative shadow-inner"
-                                    style="height: 600px; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 24px 24px;">
+                                    class="bg-white dark:bg-dark-bg rounded-2xl overflow-hidden border border-gray-200 dark:border-dark-border relative shadow-inner transition-colors duration-200"
+                                    style="height: 600px;">
+                                    <style>
+                                        #diagram-container {
+                                            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+                                            background-size: 24px 24px;
+                                        }
+
+                                        .dark #diagram-container {
+                                            background-image: radial-gradient(#1e293b 1px, transparent 1px);
+                                        }
+                                    </style>
                                     <div id="mermaid-wrapper" class="w-full h-full flex items-center justify-center">
                                         <div id="mermaid-graph-source" class="hidden">{{ $mermaid }}</div>
                                         <div id="mermaid-output" class="w-full h-full flex items-center justify-center">
@@ -737,19 +770,21 @@ $cleanOutput = function ($text) {
                                 <div>
                                     <div class="flex justify-between items-center mb-4">
                                         <div class="flex items-center gap-3">
-                                            <div class="p-2 bg-gray-100 rounded-lg text-gray-700">
+                                            <div
+                                                class="p-2 bg-gray-100 dark:bg-dark-bg rounded-lg text-gray-700 dark:text-dark-text">
                                                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                                     stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                 </svg>
                                             </div>
-                                            <h3 class="text-xl font-bold text-gray-900">Full AI Output</h3>
+                                            <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text">Full AI Output
+                                            </h3>
                                         </div>
                                         <button onclick="copyRawData()"
-                                            class="bg-white hover:bg-gray-50 text-gray-700 text-sm px-4 py-2 rounded-xl border border-gray-300 transition flex items-center gap-2 shadow-sm font-bold">
-                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
+                                            class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-sm px-4 py-2 rounded-xl border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-bold">
+                                            <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                             </svg>
@@ -757,8 +792,9 @@ $cleanOutput = function ($text) {
                                         </button>
                                     </div>
                                     <div
-                                        class="bg-gray-50 rounded-2xl p-8 border border-gray-200 overflow-auto max-h-[600px] shadow-inner">
-                                        <pre id="raw-llm-output" class="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">{{ $analysis->llm_output }}</pre>
+                                        class="bg-gray-50 dark:bg-dark-bg rounded-2xl p-8 border border-gray-200 dark:border-dark-border overflow-auto max-h-[600px] shadow-inner">
+                                        <pre id="raw-llm-output"
+                                            class="text-sm text-gray-700 dark:text-dark-muted whitespace-pre-wrap font-mono leading-relaxed">{{ $analysis->llm_output }}</pre>
                                     </div>
                                 </div>
 
@@ -766,7 +802,8 @@ $cleanOutput = function ($text) {
                                     <div>
                                         <div class="flex justify-between items-center mb-4">
                                             <div class="flex items-center gap-3">
-                                                <div class="p-2 bg-gray-100 rounded-lg text-gray-700">
+                                                <div
+                                                    class="p-2 bg-gray-100 dark:bg-dark-bg rounded-lg text-gray-700 dark:text-dark-text">
                                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                                         stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -774,12 +811,13 @@ $cleanOutput = function ($text) {
                                                             d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                     </svg>
                                                 </div>
-                                                <h3 class="text-xl font-bold text-gray-900">Extracted Mermaid Source</h3>
+                                                <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text">Extracted
+                                                    Mermaid Source</h3>
                                             </div>
                                             <button onclick="copyMermaidSource()"
-                                                class="bg-white hover:bg-gray-50 text-gray-700 text-sm px-4 py-2 rounded-xl border border-gray-300 transition flex items-center gap-2 shadow-sm font-bold">
-                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
+                                                class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-sm px-4 py-2 rounded-xl border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-bold">
+                                                <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                                 </svg>
@@ -798,18 +836,19 @@ $cleanOutput = function ($text) {
                         <div id="content-logs-completed" class="analysis-tab-content hidden">
                             <div class="flex justify-between items-center mb-8">
                                 <div class="flex items-center gap-3">
-                                    <div class="p-2 bg-gray-100 rounded-lg text-gray-700">
+                                    <div
+                                        class="p-2 bg-gray-100 dark:bg-dark-bg rounded-lg text-gray-700 dark:text-dark-text">
                                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
                                     </div>
-                                    <h2 class="text-2xl font-bold text-gray-900">Analysis Logs</h2>
+                                    <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">Analysis Logs</h2>
                                 </div>
                                 <button onclick="copyLogsFromCompleted()"
-                                    class="bg-white hover:bg-gray-50 text-gray-700 text-sm px-4 py-2 rounded-xl border border-gray-300 transition flex items-center gap-2 shadow-sm font-bold">
-                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
+                                    class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-sm px-4 py-2 rounded-xl border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-bold">
+                                    <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                     </svg>
@@ -932,16 +971,22 @@ $cleanOutput = function ($text) {
                                 } = await mermaid.render('mermaid-svg-rendered', graphText);
 
                                 // Add modern styling to the SVG
+                                const isDarkMode = document.documentElement.classList.contains('dark');
                                 let styledSvg = svg.replace('<style>', '<style>' +
                                     '.node rect, .node circle, .node polygon, .node path { ' +
                                     '   stroke-width: 2px !important; ' +
                                     '   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05)); ' +
                                     '   rx: 8px; ry: 8px; ' +
                                     '} ' +
-                                    '.edgePath path { stroke-width: 1.5px !important; stroke: #94a3b8 !important; } ' +
-                                    '.edgeLabel { background-color: rgba(255, 255, 255, 0.8) !important; padding: 2px 4px !important; border-radius: 4px !important; } ' +
-                                    '.label { font-weight: 600 !important; color: #334155 !important; } ' +
-                                    '.cluster rect { fill: #f8fafc !important; stroke: #e2e8f0 !important; rx: 12px; ry: 12px; }'
+                                    '.edgePath path { stroke-width: 1.5px !important; stroke: ' + (isDarkMode ? '#64748b' :
+                                        '#94a3b8') + ' !important; } ' +
+                                    '.edgeLabel { background-color: ' + (isDarkMode ? 'rgba(15, 23, 42, 0.8)' :
+                                        'rgba(255, 255, 255, 0.8)') +
+                                    ' !important; padding: 2px 4px !important; border-radius: 4px !important; } ' +
+                                    '.label { font-weight: 600 !important; color: ' + (isDarkMode ? '#f8fafc' : '#334155') +
+                                    ' !important; } ' +
+                                    '.cluster rect { fill: ' + (isDarkMode ? '#1e293b' : '#f8fafc') + ' !important; stroke: ' +
+                                    (isDarkMode ? '#334155' : '#e2e8f0') + ' !important; rx: 12px; ry: 12px; }'
                                 );
 
                                 output.innerHTML = styledSvg;

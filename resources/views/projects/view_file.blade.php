@@ -13,25 +13,25 @@
     }
 </style>
 
-<div class="space-y-8">
+<div class="space-y-8 transition-colors duration-200">
     <div class="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div class="flex-1 min-w-0">
-            <h1 class="text-3xl font-bold text-gray-900">{{ $project->name }}</h1>
-            <nav class="flex mt-2 text-sm text-gray-500 font-medium" aria-label="Breadcrumb">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-dark-text">{{ $project->name }}</h1>
+            <nav class="flex mt-2 text-sm text-gray-500 dark:text-dark-muted font-medium" aria-label="Breadcrumb">
                 <ol class="inline-flex items-center space-x-1 md:space-x-3">
                     <li class="inline-flex items-center">
-                        <a href="{{ route('projects.browse', $project) }}" class="hover:text-green-600">Root</a>
+                        <a href="{{ route('projects.browse', $project) }}" class="hover:text-green-600 dark:hover:text-green-400">Root</a>
                     </li>
                     @foreach($breadcrumbs as $index => $breadcrumb)
                         <li>
                             <div class="flex items-center">
-                                <svg class="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                                <svg class="w-3 h-3 text-gray-400 dark:text-dark-muted mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
                                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
                                 </svg>
                                 @if($index === count($breadcrumbs) - 1)
-                                    <span class="ml-1 text-gray-700 md:ml-2">{{ $breadcrumb['name'] }}</span>
+                                    <span class="ml-1 text-gray-700 dark:text-dark-text md:ml-2">{{ $breadcrumb['name'] }}</span>
                                 @else
-                                    <a href="{{ route('projects.browse.path', [$project, 'path' => $breadcrumb['path']]) }}" class="ml-1 hover:text-green-600 md:ml-2">{{ $breadcrumb['name'] }}</a>
+                                    <a href="{{ route('projects.browse.path', [$project, 'path' => $breadcrumb['path']]) }}" class="ml-1 hover:text-green-600 dark:hover:text-green-400 md:ml-2">{{ $breadcrumb['name'] }}</a>
                                 @endif
                             </div>
                         </li>
@@ -39,7 +39,7 @@
                 </ol>
             </nav>
         </div>
-        <a href="{{ dirname($path) === '.' ? route('projects.browse', $project) : route('projects.browse.path', [$project, 'path' => dirname($path)]) }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition">
+        <a href="{{ dirname($path) === '.' ? route('projects.browse', $project) : route('projects.browse.path', [$project, 'path' => dirname($path)]) }}" class="bg-gray-100 dark:bg-dark-card hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text px-4 py-2 rounded-lg font-medium transition border border-gray-200 dark:border-dark-border">
             &larr; Back to Folder
         </a>
     </div>

@@ -52,6 +52,12 @@ class AnalyzeRepositoryJob implements ShouldQueue
         ]);
         $this->logStep('Starting repository analysis...');
 
+        if (!in_array('all', $this->targets)) {
+            $this->logStep('Targets for this run: ' . implode(', ', $this->targets));
+        } else {
+            $this->logStep('Performing full analysis (all targets).');
+        }
+
         $tempDir = storage_path('app/temp/' . uniqid('repo_'));
 
         try {
