@@ -262,18 +262,42 @@ class AnalyzeRepositoryJob implements ShouldQueue
             $this->logStep('Step 3: Generating final business explanation...');
             $this->analysis->update(['progress_message' => 'Generating final explanation...']);
 
-            $finalPrompt = $this->buildFinalPrompt($fileSummaries, $fullStructureMap);
-            $this->analysis->update(['prompt' => $finalPrompt]);
-            $this->logStep('Final prompt built. Character count: ' . strlen($finalPrompt));
+            $summaryList = "";
+            foreach ($fileSummaries as $item) {
+                $summaryList .= "- {$item['path']}: {$item['summary']}\n";
+            }
 
-            $llmOutput = $llm->generate($finalPrompt, function ($message) {
-                $this->logStep('AI generating final report: ' . $message);
-            }, [
-                'num_predict' => 1500, // Limit to ~1500 tokens for speed
-                'num_ctx' => 8192,     // Larger context for full map
-            ]);
+            $commonContext = "Context:\nStructure: " . json_encode($fullStructureMap) . "\nSummaries: " . $summaryList;
 
-            $this->logStep('AI response received. Output length: ' . strlen($llmOutput));
+            // 3.1 Features
+            $this->logStep('Analyzing core features...');
+            $featuresPrompt = "Task: List 3-5 high-level business features of this project.\n" . $commonContext . "\n\nFormat: Bullet points.\nNo chatter.";
+            $features = $llm->generate($featuresPrompt, null, ['num_predict' => 500]);
+            $this->analysis->update(['features_content' => trim($features)]);
+
+            // 3.2 UI
+            $this->logStep('Analyzing user interface...');
+            $uiPrompt = "Task: Describe what the user sees or the output format of this project.\n" . $commonContext . "\n\nFormat: Plain English paragraph.\nNo chatter.";
+            $ui = $llm->generate($uiPrompt, null, ['num_predict' => 500]);
+            $this->analysis->update(['ui_content' => trim($ui)]);
+
+            // 3.3 Flow
+            $this->logStep('Analyzing user journey...');
+            $flowPrompt = "Task: Describe the step-by-step user journey or logic flow of this project.\n" . $commonContext . "\n\nFormat: Numbered steps.\nNo chatter.";
+            $flow = $llm->generate($flowPrompt, null, ['num_predict' => 500]);
+            $this->analysis->update(['flow_content' => trim($flow)]);
+
+            // 3.4 Mermaid
+            $this->logStep('Generating process flowchart...');
+            $mermaidPrompt = "Task: Generate a Mermaid.js 'graph TD' diagram for this project.\n" . $commonContext . "\n\nFormat: ONLY raw Mermaid code. No backticks.\nNo chatter.";
+            $mermaid = $llm->generate($mermaidPrompt, null, ['num_predict' => 1000]);
+            $this->analysis->update(['mermaid_content' => trim($mermaid)]);
+
+            // Keep llm_output for compatibility (concatenated)
+            $llmOutput = "[FEATURES]\n{$features}\n\n[UI]\n{$ui}\n\n[FLOW]\n{$flow}\n\n[DIAGRAM]\n{$mermaid}";
+            $this->analysis->update(['llm_output' => $llmOutput]);
+
+            $this->logStep('Final analysis completed.');
 
             // Step 4: Save results (only if we parsed new data or if directory is missing)
             $projectDir = storage_path('app/projects/' . $this->project->id);

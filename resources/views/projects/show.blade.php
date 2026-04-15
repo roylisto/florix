@@ -370,70 +370,83 @@
                 </div>
             @else
                 @php
-                    $output = $analysis->llm_output;
+                    $features = $analysis->features_content;
+                    $ui = $analysis->ui_content;
+                    $flow = $analysis->flow_content;
+                    $mermaid = $analysis->mermaid_content;
 
-                    // Extract features - match both [FEATURES] and FEATURES headers
-                    preg_match(
-                        '/(?:\[FEATURES\]|FEATURES)[:\s]*(.*?)(?=\s*(?:\[UI\]|WHAT USER SEES|\[WHAT USER SEES\]|$))/si',
-                        $output,
-                        $featuresMatch,
-                    );
-                    $features = isset($featuresMatch[1]) ? trim($featuresMatch[1]) : '';
+                    // 1. Fallback for older analyses that don't have split content yet
+if (empty($features) && empty($ui) && empty($flow) && empty($mermaid)) {
+    $output = $analysis->llm_output;
 
-                    // Extract what user sees
-                    preg_match(
-                        '/(?:\[UI\]|\[WHAT USER SEES\]|WHAT USER SEES)[:\s]*(.*?)(?=\s*(?:\[FLOW\]|USER FLOW|\[USER FLOW\]|$))/si',
-                        $output,
-                        $uiMatch,
-                    );
-                    $ui = isset($uiMatch[1]) ? trim($uiMatch[1]) : '';
+    $extractSection = function ($content, $keywords, $stopKeywords) {
+        $pattern =
+            '/(?:' .
+            implode('|', $keywords) .
+            ')[:\s#\*\[]*(.*?)(?=\s*(?:' .
+            implode('|', $stopKeywords) .
+            ')|$)/si';
+        preg_match($pattern, $content, $match);
+        return isset($match[1]) ? trim($match[1]) : '';
+    };
 
-                    // Extract user flow
-                    preg_match(
-                        '/(?:\[FLOW\]|\[USER FLOW\]|USER FLOW)[:\s]*(.*?)(?=\s*(?:\[DIAGRAM\]|MERMAID DIAGRAM|\[MERMAID DIAGRAM\]|$))/si',
-                        $output,
-                        $flowMatch,
-                    );
-                    $flow = isset($flowMatch[1]) ? trim($flowMatch[1]) : '';
+    $featuresKeywords = ['\[FEATURES\]', 'FEATURES', 'Features', '### Features'];
+    $uiKeywords = [
+        '\[UI\]',
+        '\[WHAT USER SEES\]',
+        'WHAT USER SEES',
+        'User Interface',
+        'UI Description',
+        '### User Interface',
+    ];
+    $flowKeywords = [
+        '\[FLOW\]',
+        '\[USER FLOW\]',
+        'USER FLOW',
+        'User Journey',
+        'User Flow',
+        '### User Journey',
+        '### User Flow',
+    ];
+    $diagramKeywords = ['\[DIAGRAM\]', 'MERMAID DIAGRAM', 'DIAGRAM', '### Diagram', 'Mermaid Code'];
 
-                    // Extract mermaid diagram
-                    // Try to find graph TD or flowchart TD anywhere in the output
-                    preg_match(
-                        '/((?:graph|flowchart)\s+(?:TD|LR|TB|BT)[\s\S]*)/si',
-                        $output,
-                        $mermaidMatch,
-                    );
-                    $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
+    $features = $extractSection(
+        $output,
+        $featuresKeywords,
+        array_merge($uiKeywords, $flowKeywords, $diagramKeywords),
+    );
+    $ui = $extractSection($output, $uiKeywords, array_merge($flowKeywords, $diagramKeywords));
+    $flow = $extractSection($output, $flowKeywords, $diagramKeywords);
 
-                    // Clean up potential instruction leaks (e.g., if AI echoes back parts of the prompt)
-                    $cleanOutput = function ($text) {
-                        // Remove the diagram from the text sections if it's there
-                        $text = preg_replace('/(?:graph|flowchart)\s+(?:TD|LR|TB|BT)[\s\S]*/si', '', $text);
-                        
-                        $text = preg_replace('/STRICT (?:CONSTRAINTS|RULES).*?\n/si', '', $text);
-                        $text = preg_replace('/REPORT STRUCTURE.*?\n/si', '', $text);
-                        $text = preg_replace('/RESPONSE FORMAT.*?\n/si', '', $text);
-                        $text = preg_replace('/Role:.*?\n/si', '', $text);
-                        $text = preg_replace('/Objective:.*?\n/si', '', $text);
-                        $text = preg_replace('/Task:.*?\n/si', '', $text);
-                        $text = preg_replace('/DATASET \d:.*?\n/si', '', $text);
-                        $text = preg_replace('/RULES:.*?\n/si', '', $text);
-                        $text = preg_replace('/Instructions:.*?\n/si', '', $text);
-                        $text = preg_replace('/\[DATA\].*?\[/si', '[', $text);
-                        
-                        // Clean up generic instructions sometimes repeated by LLM
-                        $text = preg_replace('/\[List actual features.*?\]/si', '', $text);
-                        $text = preg_replace('/\[Describe the UI.*?\]/si', '', $text);
-                        $text = preg_replace('/\[Step-by-step logic.*?\]/si', '', $text);
-                        $text = preg_replace('/\(List 3-5 high-level features\)/si', '', $text);
-                        $text = preg_replace('/\(What the user sees\/outputs\)/si', '', $text);
-                        $text = preg_replace('/\(Step-by-step user journey\)/si', '', $text);
-                        $text = preg_replace('/\(List 3-5 features\)/si', '', $text);
-                        $text = preg_replace('/\(Description of user interface\)/si', '', $text);
-                        $text = preg_replace('/\(User journey steps\)/si', '', $text);
-                        $text = preg_replace('/- Feature \d/si', '', $text);
-                        $text = preg_replace('/Step \d:.*?\n/si', '', $text);
-                        $text = preg_replace('/Description of the interface\./si', '', $text);
+    preg_match('/((?:graph|flowchart)\s+(?:TD|LR|TB|BT)[\s\S]*)/si', $output, $mermaidMatch);
+    $mermaid = isset($mermaidMatch[1]) ? trim($mermaidMatch[1]) : '';
+}
+
+// 2. Mermaid Cleanup (for both new and old content)
+if ($mermaid) {
+    if (preg_match('/```(?:mermaid)?\s*([\s\S]*?)\s*```/i', $mermaid, $codeBlockMatch)) {
+        $mermaid = trim($codeBlockMatch[1]);
+    }
+
+    $mermaid = preg_replace('/```(mermaid|plaintext)?\s*/i', '', $mermaid);
+    $mermaid = preg_replace('/\s*```$/i', '', $mermaid);
+    $mermaid = str_replace(['(', ')'], ['[', ']'], $mermaid);
+    $mermaid = preg_replace('/([a-zA-Z0-9]+)\[(.*?)\]\}/', '$1["$2"]', $mermaid);
+    $mermaid = preg_replace('/([a-zA-Z0-9]+)\{(.*?)\]/', '$1["$2"]', $mermaid);
+    $mermaid = preg_replace('/\|([^|]+)\|([^>]+)-->/', '-->|$1|', $mermaid);
+    $mermaid = trim($mermaid);
+}
+
+// 3. Instruction/Data Cleanup
+$cleanOutput = function ($text) {
+    if (empty($text)) {
+        return '';
+    }
+    $text = preg_replace(
+        '/(?:STRICT|RULES|Task:|Objective:|Role:|DATASET|Instructions:).*?\n/si',
+        '',
+                            $text,
+                        );
                         return trim($text);
                     };
 
@@ -441,16 +454,8 @@
                     $ui = $cleanOutput($ui);
                     $flow = $cleanOutput($flow);
 
-                    // FALLBACK: If AI didn't use tags, show the entire output in "Core Features"
                     if (empty($features) && empty($ui) && empty($flow)) {
-                        $features = $cleanOutput($output);
-                    }
-
-                    // Clean up potential markdown code blocks that AI might still include
-                    if ($mermaid) {
-                        $mermaid = preg_replace('/```(mermaid|plaintext)?\s*/i', '', $mermaid);
-                        $mermaid = preg_replace('/\s*```$/i', '', $mermaid);
-                        $mermaid = trim($mermaid);
+                        $features = $cleanOutput($analysis->llm_output);
                     }
                 @endphp
 
@@ -540,6 +545,15 @@
                                         Process Flowchart
                                     </h2>
                                     <div class="flex space-x-2">
+                                        <button onclick="copyMermaidSource()"
+                                            class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                                            title="Copy Mermaid Source">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                            </svg>
+                                        </button>
                                         <button onclick="zoomIn()"
                                             class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
                                             title="Zoom In">
@@ -595,32 +609,54 @@
                         <div id="content-raw" class="analysis-tab-content hidden">
                             <div class="space-y-6">
                                 <div>
-                                    <h3 class="text-lg font-bold mb-3 text-gray-800 flex items-center">
-                                        <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        Full AI Output
-                                    </h3>
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            Full AI Output
+                                        </h3>
+                                        <button onclick="copyRawData()"
+                                            class="bg-white hover:bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-md border border-gray-300 transition flex items-center gap-1.5 shadow-sm font-medium">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                            </svg>
+                                            <span>Copy Raw Output</span>
+                                        </button>
+                                    </div>
                                     <div
                                         class="bg-gray-50 rounded-lg p-6 border border-gray-200 overflow-auto max-h-[500px]">
-                                        <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono">{{ $analysis->llm_output }}</pre>
+                                        <pre id="raw-llm-output" class="text-sm text-gray-700 whitespace-pre-wrap font-mono">{{ $analysis->llm_output }}</pre>
                                     </div>
                                 </div>
 
                                 @if ($mermaid)
                                     <div>
-                                        <h3 class="text-lg font-bold mb-3 text-gray-800 flex items-center">
-                                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                            </svg>
-                                            Extracted Mermaid Source
-                                        </h3>
+                                        <div class="flex justify-between items-center mb-3">
+                                            <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                                                    stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                </svg>
+                                                Extracted Mermaid Source
+                                            </h3>
+                                            <button onclick="copyMermaidSource()"
+                                                class="bg-white hover:bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-md border border-gray-300 transition flex items-center gap-1.5 shadow-sm font-medium">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                                </svg>
+                                                <span>Copy Source</span>
+                                            </button>
+                                        </div>
                                         <div class="bg-gray-900 rounded-lg p-6 border border-gray-700">
-                                            <pre class="text-sm text-green-400 whitespace-pre-wrap font-mono">{{ $mermaid }}</pre>
+                                            <pre id="mermaid-source-display" class="text-sm text-green-400 whitespace-pre-wrap font-mono">{{ $mermaid }}</pre>
                                         </div>
                                     </div>
                                 @endif
@@ -632,6 +668,39 @@
                 <script>
                     let panZoomInstance = null;
                     let mermaidRendered = false;
+
+                    function copyRawData() {
+                        const raw = document.getElementById('raw-llm-output').innerText;
+                        navigator.clipboard.writeText(raw).then(() => {
+                            const btn = document.querySelector('button[onclick="copyRawData()"]');
+                            const span = btn.querySelector('span');
+                            const originalText = span.innerText;
+                            span.innerText = 'Copied!';
+                            btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                            setTimeout(() => {
+                                span.innerText = originalText;
+                                btn.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                            }, 2000);
+                        });
+                    }
+
+                    function copyMermaidSource() {
+                        const source = document.getElementById('mermaid-source-display').innerText;
+                        navigator.clipboard.writeText(source).then(() => {
+                            const btns = document.querySelectorAll('button[onclick="copyMermaidSource()"]');
+                            btns.forEach(btn => {
+                                const span = btn.querySelector('span');
+                                const originalText = span ? span.innerText : '';
+                                if (span) span.innerText = 'Copied!';
+                                btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                setTimeout(() => {
+                                    if (span) span.innerText = originalText;
+                                    btn.classList.remove('bg-green-50', 'text-green-700',
+                                        'border-green-200');
+                                }, 2000);
+                            });
+                        });
+                    }
 
                     function switchAnalysisTab(tab) {
                         // Hide all content

@@ -18,7 +18,11 @@ class Analysis extends Model
         'prompt',
         'error',
         'zip_path',
-        'extracted_path'
+        'extracted_path',
+        'features_content',
+        'ui_content',
+        'flow_content',
+        'mermaid_content'
     ];
 
     protected $casts = [
