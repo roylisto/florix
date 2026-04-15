@@ -77,7 +77,7 @@
                 </a>
             </div>
             <div class="flex items-center gap-4">
-                <span class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider hidden sm:inline">Local AI Engine: Ollama</span>
+                <span class="text-xs font-medium text-gray-400 dark:text-dark-muted uppercase tracking-wider hidden sm:inline">Local AI Engine: Ollama</span>
                 
                 <!-- Theme Toggle Button -->
                 <button onclick="toggleTheme()" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700" title="Toggle Theme">
@@ -99,7 +99,7 @@
                 <nav class="mt-2 flex-1 px-2 space-y-1">
                     <a href="{{ route('projects.index') }}"
                         class="{{ request()->routeIs('projects.index') ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200' }} group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors">
-                        <svg class="{{ request()->routeIs('projects.index') ? 'text-green-500' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300' }} mr-3 flex-shrink-0 h-5 w-5"
+                        <svg class="{{ request()->routeIs('projects.index') ? 'text-green-500' : 'text-gray-400 dark:text-dark-muted group-hover:text-gray-500 dark:group-hover:text-gray-300' }} mr-3 flex-shrink-0 h-5 w-5"
                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -107,13 +107,13 @@
                         Dashboard
                     </a>
 
-                    <div class="pt-4 pb-2 px-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    <div class="pt-4 pb-2 px-3 text-xs font-semibold text-gray-400 dark:text-dark-muted uppercase tracking-wider">
                         Quick Links
                     </div>
 
                     <a href="{{ route('projects.index') }}?action=upload"
                         class="text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200 group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors">
-                        <svg class="text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300 mr-3 flex-shrink-0 h-5 w-5" fill="none"
+                        <svg class="text-gray-400 dark:text-dark-muted group-hover:text-gray-500 dark:group-hover:text-gray-300 mr-3 flex-shrink-0 h-5 w-5" fill="none"
                             stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
@@ -122,7 +122,7 @@
                 </nav>
             </div>
             <div class="p-4 border-t border-gray-100 dark:border-dark-border">
-                <div class="text-[10px] text-gray-400 dark:text-gray-500 text-center uppercase tracking-widest font-bold">
+                <div class="text-[10px] text-gray-400 dark:text-dark-muted text-center uppercase tracking-widest font-bold">
                     &copy; {{ date('Y') }} Florix AI
                 </div>
             </div>

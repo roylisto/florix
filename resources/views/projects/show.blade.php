@@ -8,15 +8,10 @@
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-dark-text break-words">{{ $project->name }}</h1>
                     @php
                         $statusClasses = match ($analysis?->status) {
-                            'completed'
-                                => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
-                            'processing',
-                            'generating_explanation'
-                                => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-                            'failed'
-                                => 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
-                            default
-                                => 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+                            'completed' => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+                            'processing', 'generating_explanation' => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+                            'failed' => 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+                            default => 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
                         };
                     @endphp
                     <span id="status-badge"
@@ -25,8 +20,7 @@
                     </span>
                 </div>
                 <div class="flex items-center text-sm text-gray-500 dark:text-dark-muted">
-                    <a href="{{ route('projects.index') }}"
-                        class="hover:text-green-600 dark:hover:text-green-500 flex items-center transition-colors">
+                    <a href="{{ route('projects.index') }}" class="hover:text-green-600 dark:hover:text-green-500 flex items-center transition-colors">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -132,52 +126,64 @@
             $analysis?->status === 'pending' ||
                 $analysis?->status === 'processing' ||
                 $analysis?->status === 'generating_explanation')
-            <div id="processing-view"
-                class="bg-white dark:bg-dark-card rounded-xl shadow-lg p-12 text-center border border-gray-100 dark:border-dark-border transition-colors duration-200">
-                <div class="relative inline-block mb-8">
-                    <div class="absolute inset-0 animate-ping rounded-full bg-green-100 dark:bg-green-900/20 opacity-75">
-                    </div>
-                    <div
-                        class="relative rounded-full h-16 w-16 border-4 border-green-600 dark:border-green-500 border-t-transparent animate-spin">
+            <div id="processing-view" class="bg-white dark:bg-dark-card rounded-xl shadow-lg p-8 md:p-12 text-center border border-gray-100 dark:border-dark-border transition-colors duration-200">
+                <div class="relative inline-block mb-6">
+                    <!-- Custom Florix Plant Animation -->
+                    <div class="h-24 w-24 mx-auto mb-2 relative flex items-center justify-center">
+                        <svg class="w-full h-full text-green-500" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <style>
+                                .branch { stroke-dasharray: 100; stroke-dashoffset: 100; animation: grow 3s ease-out infinite; }
+                                .leaf { opacity: 0; animation: fadeIn 3s ease-out infinite; }
+                                @keyframes grow { 0% { stroke-dashoffset: 100; } 50%, 100% { stroke-dashoffset: 0; } }
+                                @keyframes fadeIn { 0%, 40% { opacity: 0; transform: scale(0); } 60%, 100% { opacity: 1; transform: scale(1); } }
+                                .branch-1 { animation-delay: 0s; }
+                                .branch-2 { animation-delay: 0.5s; }
+                                .leaf-1 { animation-delay: 1.2s; }
+                                .leaf-2 { animation-delay: 1.5s; }
+                                .leaf-3 { animation-delay: 1.8s; }
+                            </style>
+                            <!-- Main Stem -->
+                            <path class="branch branch-1" d="M50 90V40" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                            <!-- Branches -->
+                            <path class="branch branch-2" d="M50 70C65 60 75 55 75 40" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                            <path class="branch branch-2" d="M50 60C35 50 25 45 25 30" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                            <!-- Leaves -->
+                            <circle class="leaf leaf-1" cx="50" cy="35" r="5" fill="currentColor"/>
+                            <circle class="leaf leaf-2" cx="75" cy="35" r="4" fill="currentColor"/>
+                            <circle class="leaf leaf-3" cx="25" cy="25" r="4" fill="currentColor"/>
+                        </svg>
                     </div>
                 </div>
 
-                <h2 id="processing-title" class="text-2xl font-bold text-gray-900 dark:text-dark-text mb-3">
+                <h2 id="processing-title" class="text-xl font-bold text-gray-900 dark:text-dark-text mb-2">
                     @if ($analysis?->status === 'generating_explanation')
                         Generating AI Explanation...
                     @else
                         Analyzing Repository...
                     @endif
                 </h2>
-                <p id="processing-description"
-                    class="text-gray-600 dark:text-dark-muted max-w-lg mx-auto leading-relaxed">
+                <p id="processing-description" class="text-sm text-gray-600 dark:text-dark-muted max-w-lg mx-auto leading-relaxed mb-6">
                     @if ($analysis?->status === 'generating_explanation')
-                        The AI is now processing the parsed data to generate a business-friendly explanation. This step can
-                        take a few minutes depending on the repository size.
+                        The AI is now processing the parsed data to generate a business-friendly explanation.
                     @else
-                        We are parsing your code and preparing it for AI analysis. This may take a minute.
+                        We are parsing your code and preparing it for AI analysis.
                     @endif
                 </p>
 
                 <div id="progress-container"
-                    class="mt-8 py-3 px-6 bg-green-50 dark:bg-green-900/10 rounded-full inline-flex items-center space-x-3 border border-green-100 dark:border-green-900/30 {{ $analysis?->progress_message ? '' : 'hidden' }}">
+                    class="py-2.5 px-5 bg-green-50 dark:bg-green-900/10 rounded-full inline-flex items-center space-x-3 border border-green-100 dark:border-green-900/30 {{ $analysis?->progress_message ? '' : 'hidden' }}">
                     <div class="flex space-x-1">
-                        <div class="h-2 w-2 bg-green-600 dark:bg-green-500 rounded-full animate-bounce"
-                            style="animation-delay: 0s"></div>
-                        <div class="h-2 w-2 bg-green-600 dark:bg-green-500 rounded-full animate-bounce"
-                            style="animation-delay: 0.2s"></div>
-                        <div class="h-2 w-2 bg-green-600 dark:bg-green-500 rounded-full animate-bounce"
-                            style="animation-delay: 0.4s"></div>
+                        <div class="h-1.5 w-1.5 bg-green-600 dark:bg-green-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                        <div class="h-1.5 w-1.5 bg-green-600 dark:bg-green-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="h-1.5 w-1.5 bg-green-600 dark:bg-green-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
                     </div>
                     <span id="progress-message"
-                        class="text-sm font-semibold text-green-800 dark:text-green-400">{{ $analysis?->progress_message }}</span>
+                        class="text-xs font-semibold text-green-800 dark:text-green-400">{{ $analysis?->progress_message }}</span>
                 </div>
 
                 <!-- Debugging Tabs -->
-                <div
-                    class="mt-12 text-left bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden transition-colors duration-200">
-                    <div
-                        class="border-b border-gray-200 dark:border-dark-border flex items-center justify-between bg-white dark:bg-dark-card px-6 transition-colors duration-200">
+                <div class="mt-8 text-left bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden transition-colors duration-200">
+                    <div class="border-b border-gray-200 dark:border-dark-border flex items-center justify-between bg-white dark:bg-dark-card px-6 transition-colors duration-200">
                         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                             <button onclick="switchTab('logs')" id="tab-logs"
                                 class="border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition-all">
@@ -192,8 +198,8 @@
                             <button onclick="copyLogs()"
                                 class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-semibold"
                                 title="Copy logs to clipboard">
-                                <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                 </svg>
@@ -252,24 +258,6 @@
                             const span = btn.querySelector('span');
                             const originalText = span.innerText;
                             span.innerText = 'Copied!';
-                            btn.classList.add('bg-green-800', 'border-green-600', 'text-white');
-                            setTimeout(() => {
-                                span.innerText = originalText;
-                                btn.classList.remove('bg-green-800', 'border-green-600', 'text-white');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy logs: ', err);
-                            alert('Could not copy logs to clipboard.');
-                        });
-                    }
-
-                    function copyLogsFromCompleted() {
-                        const logs = document.getElementById('completed-logs').innerText;
-                        navigator.clipboard.writeText(logs).then(() => {
-                            const btn = document.querySelector('button[onclick="copyLogsFromCompleted()"]');
-                            const span = btn.querySelector('span');
-                            const originalText = span.innerText;
-                            span.innerText = 'Copied!';
                             btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
                             setTimeout(() => {
                                 span.innerText = originalText;
@@ -287,17 +275,17 @@
 
                         if (tab === 'logs') {
                             logsBtn.className =
-                                'border-green-500 text-green-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                                'border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition-all';
                             promptBtn.className =
-                                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                                'border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all';
                             logsContent.classList.remove('hidden');
                             promptContent.classList.add('hidden');
                             logsActions.classList.remove('hidden');
                         } else {
                             promptBtn.className =
-                                'border-green-500 text-green-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                                'border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition-all';
                             logsBtn.className =
-                                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm';
+                                'border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all';
                             promptContent.classList.remove('hidden');
                             logsContent.classList.add('hidden');
                             logsActions.classList.add('hidden');
@@ -313,12 +301,12 @@
                                 badge.innerText = data.status.charAt(0).toUpperCase() + data.status.slice(1).replace('_', ' ');
 
                                 // Update badge colors
-                                badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ';
-                                if (data.status === 'completed') badge.classList.add('bg-green-100', 'text-green-800');
+                                badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ';
+                                if (data.status === 'completed') badge.classList.add('bg-green-100', 'text-green-800', 'border-green-200', 'dark:bg-green-900/30', 'dark:text-green-400', 'dark:border-green-800');
                                 else if (data.status === 'processing' || data.status === 'generating_explanation') badge.classList
-                                    .add('bg-blue-100', 'text-blue-800');
-                                else if (data.status === 'failed') badge.classList.add('bg-red-100', 'text-red-800');
-                                else badge.classList.add('bg-gray-100', 'text-gray-800');
+                                    .add('bg-blue-100', 'text-blue-800', 'border-blue-200', 'dark:bg-blue-900/30', 'dark:text-blue-400', 'dark:border-blue-800');
+                                else if (data.status === 'failed') badge.classList.add('bg-red-100', 'text-red-800', 'border-red-200', 'dark:bg-red-900/30', 'dark:text-red-400', 'dark:border-red-800');
+                                else badge.classList.add('bg-gray-100', 'text-gray-800', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700');
 
                                 // If completed or failed, refresh page to show results/error
                                 if (data.status === 'completed' || data.status === 'failed') {
@@ -387,22 +375,22 @@
                 </script>
             </div>
         @elseif($analysis?->status === 'failed')
-            <div class="bg-white rounded-2xl shadow-xl p-12 text-center border border-red-100 max-w-2xl mx-auto">
-                <div class="bg-red-100 text-red-600 p-4 rounded-full inline-block mb-6">
+            <div class="bg-white dark:bg-dark-card rounded-2xl shadow-xl p-12 text-center border border-red-100 dark:border-red-900/30 max-w-2xl mx-auto transition-colors duration-200">
+                <div class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-4 rounded-full inline-block mb-6">
                     <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-3">Analysis Failed</h2>
-                <p class="text-gray-600 mb-8 leading-relaxed">Something went wrong during the analysis. Review the error
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text mb-3">Analysis Failed</h2>
+                <p class="text-gray-600 dark:text-dark-muted mb-8 leading-relaxed">Something went wrong during the analysis. Review the error
                     details below to troubleshoot the issue.</p>
 
                 @if (!empty($analysis?->error))
                     <div class="mb-8 text-left">
-                        <h3 class="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Error Message</h3>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-dark-text mb-3 uppercase tracking-wider">Error Message</h3>
                         <div
-                            class="bg-red-50 text-red-800 p-6 rounded-xl border border-red-100 text-sm font-mono leading-relaxed shadow-inner">
+                            class="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400 p-6 rounded-xl border border-red-100 dark:border-red-900/30 text-sm font-mono leading-relaxed shadow-inner">
                             {{ $analysis->error }}
                         </div>
                     </div>
@@ -410,7 +398,7 @@
 
                 @if (!empty($logTail))
                     <div class="mb-8 text-left">
-                        <h3 class="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Recent Logs</h3>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-dark-text mb-3 uppercase tracking-wider">Recent Logs</h3>
                         <pre id="log-container"
                             class="whitespace-pre-wrap bg-gray-900 text-gray-100 p-6 rounded-xl text-xs overflow-auto max-h-80 shadow-xl leading-relaxed">{{ $logTail }}</pre>
                     </div>
@@ -426,7 +414,7 @@
 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
                     <a href="{{ route('projects.index') }}"
-                        class="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-xl transition-all">
+                        class="w-full sm:w-auto bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-dark-text font-bold py-3 px-8 rounded-xl transition-all">
                         Back to Dashboard
                     </a>
                     @if ($project?->repo_path || $analysis?->zip_path)
@@ -459,15 +447,15 @@
             </div>
         @elseif($analysis?->status === 'completed')
             @if (str_starts_with($analysis->llm_output, 'NO_DATA_FOUND:'))
-                <div class="bg-white rounded-2xl shadow-xl p-16 text-center border border-yellow-100 max-w-2xl mx-auto">
-                    <div class="bg-yellow-100 text-yellow-600 p-5 rounded-full inline-block mb-6">
+                <div class="bg-white dark:bg-dark-card rounded-2xl shadow-xl p-16 text-center border border-yellow-100 dark:border-yellow-900/30 max-w-2xl mx-auto transition-colors duration-200">
+                    <div class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 p-5 rounded-full inline-block mb-6">
                         <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     </div>
-                    <h2 class="text-3xl font-bold text-gray-900 mb-4">No Code Found</h2>
-                    <p class="text-gray-600 mb-10 text-lg leading-relaxed">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-dark-text mb-4">No Code Found</h2>
+                    <p class="text-gray-600 dark:text-dark-muted mb-10 text-lg leading-relaxed">
                         {{ str_replace('NO_DATA_FOUND: ', '', $analysis->llm_output) }}</p>
                     <a href="{{ route('projects.index') }}"
                         class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg hover:shadow-xl inline-flex items-center gap-2">
@@ -568,10 +556,8 @@ $cleanOutput = function ($text) {
                     }
                 @endphp
 
-                <div
-                    class="bg-white dark:bg-dark-card rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-dark-border transition-colors duration-200">
-                    <div
-                        class="bg-gray-50/50 dark:bg-dark-bg/50 border-b border-gray-200 dark:border-dark-border px-4 transition-colors duration-200">
+                <div class="bg-white dark:bg-dark-card rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-dark-border transition-colors duration-200">
+                    <div class="bg-gray-50/50 dark:bg-dark-bg/50 border-b border-gray-200 dark:border-dark-border px-4">
                         <nav class="flex -mb-px overflow-x-auto no-scrollbar" aria-label="Tabs">
                             <button onclick="switchAnalysisTab('features')" id="tab-features"
                                 class="border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 whitespace-nowrap py-5 px-6 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
@@ -632,8 +618,7 @@ $cleanOutput = function ($text) {
                         <!-- Features Content -->
                         <div id="content-features" class="analysis-tab-content">
                             <div class="flex items-center gap-3 mb-8">
-                                <div
-                                    class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-700 dark:text-green-400">
+                                <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-700 dark:text-green-400">
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -641,8 +626,7 @@ $cleanOutput = function ($text) {
                                 </div>
                                 <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">Core Features</h2>
                             </div>
-                            <div
-                                class="prose prose-green dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
+                            <div class="prose prose-green dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
                                 {!! nl2br(e($features)) !!}
                             </div>
                         </div>
@@ -650,8 +634,7 @@ $cleanOutput = function ($text) {
                         <!-- What User Sees Content -->
                         <div id="content-ui" class="analysis-tab-content hidden">
                             <div class="flex items-center gap-3 mb-8">
-                                <div
-                                    class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-700 dark:text-blue-400">
+                                <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-700 dark:text-blue-400">
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -659,11 +642,9 @@ $cleanOutput = function ($text) {
                                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">What Your Users Will See
-                                </h2>
+                                <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">What Your Users Will See</h2>
                             </div>
-                            <div
-                                class="prose prose-blue dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
+                            <div class="prose prose-blue dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
                                 {!! nl2br(e($ui)) !!}
                             </div>
                         </div>
@@ -671,8 +652,7 @@ $cleanOutput = function ($text) {
                         <!-- User Flow Content -->
                         <div id="content-flow" class="analysis-tab-content hidden">
                             <div class="flex items-center gap-3 mb-8">
-                                <div
-                                    class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-700 dark:text-purple-400">
+                                <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-700 dark:text-purple-400">
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -680,8 +660,7 @@ $cleanOutput = function ($text) {
                                 </div>
                                 <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">The User Journey</h2>
                             </div>
-                            <div
-                                class="prose prose-purple dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
+                            <div class="prose prose-purple dark:prose-invert max-w-none text-gray-700 dark:text-dark-muted leading-relaxed text-lg">
                                 {!! nl2br(e($flow)) !!}
                             </div>
                         </div>
@@ -691,19 +670,19 @@ $cleanOutput = function ($text) {
                             <div id="content-diagram" class="analysis-tab-content hidden">
                                 <div class="flex items-center justify-between mb-8">
                                     <div class="flex items-center gap-3">
-                                        <div class="p-2 bg-orange-100 rounded-lg text-orange-700">
+                                        <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-700 dark:text-orange-400">
                                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                             </svg>
                                         </div>
-                                        <h2 class="text-2xl font-bold text-gray-900">Process Flowchart</h2>
+                                        <h2 class="text-2xl font-bold text-gray-900 dark:text-dark-text">Process Flowchart</h2>
                                     </div>
                                     <div
-                                        class="flex items-center p-1 bg-gray-100 rounded-xl border border-gray-200 shadow-sm">
+                                        class="flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
                                         <button onclick="zoomIn()"
-                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
+                                            class="p-2 hover:bg-white dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 rounded-lg transition-all text-gray-500 dark:text-dark-muted hover:shadow-sm"
                                             title="Zoom In">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -712,7 +691,7 @@ $cleanOutput = function ($text) {
                                             </svg>
                                         </button>
                                         <button onclick="zoomOut()"
-                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
+                                            class="p-2 hover:bg-white dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 rounded-lg transition-all text-gray-500 dark:text-dark-muted hover:shadow-sm"
                                             title="Zoom Out">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -720,9 +699,9 @@ $cleanOutput = function ($text) {
                                                     d="M20 12H4" />
                                             </svg>
                                         </button>
-                                        <div class="w-px h-4 bg-gray-300 mx-1"></div>
+                                        <div class="w-px h-4 bg-gray-300 dark:bg-dark-border mx-1"></div>
                                         <button onclick="resetZoom()"
-                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
+                                            class="p-2 hover:bg-white dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 rounded-lg transition-all text-gray-500 dark:text-dark-muted hover:shadow-sm"
                                             title="Reset Zoom">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -731,7 +710,7 @@ $cleanOutput = function ($text) {
                                             </svg>
                                         </button>
                                         <button onclick="toggleFullscreen()"
-                                            class="p-2 hover:bg-white hover:text-green-600 rounded-lg transition-all text-gray-500 hover:shadow-sm"
+                                            class="p-2 hover:bg-white dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 rounded-lg transition-all text-gray-500 dark:text-dark-muted hover:shadow-sm"
                                             title="Toggle Fullscreen">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -742,19 +721,13 @@ $cleanOutput = function ($text) {
                                     </div>
                                 </div>
                                 <div id="diagram-container"
-                                    class="bg-white dark:bg-dark-bg rounded-2xl overflow-hidden border border-gray-200 dark:border-dark-border relative shadow-inner transition-colors duration-200"
-                                    style="height: 600px;">
-                                    <style>
-                                        #diagram-container {
-                                            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
-                                            background-size: 24px 24px;
-                                        }
-
-                                        .dark #diagram-container {
-                                            background-image: radial-gradient(#1e293b 1px, transparent 1px);
-                                        }
-                                    </style>
-                                    <div id="mermaid-wrapper" class="w-full h-full flex items-center justify-center">
+                                    class="bg-white dark:bg-dark-card rounded-2xl overflow-hidden border border-gray-200 dark:border-dark-border relative shadow-inner transition-colors duration-200"
+                                    style="height: 600px; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 24px 24px;">
+                                    <!-- Dark mode background overlay -->
+                                    <div class="absolute inset-0 pointer-events-none opacity-0 dark:opacity-100 transition-opacity duration-200" 
+                                         style="background-image: radial-gradient(#334155 1px, transparent 1px); background-size: 24px 24px;"></div>
+                                    
+                                    <div id="mermaid-wrapper" class="w-full h-full flex items-center justify-center relative z-10">
                                         <div id="mermaid-graph-source" class="hidden">{{ $mermaid }}</div>
                                         <div id="mermaid-output" class="w-full h-full flex items-center justify-center">
                                             <!-- SVG will be injected here -->
@@ -770,21 +743,19 @@ $cleanOutput = function ($text) {
                                 <div>
                                     <div class="flex justify-between items-center mb-4">
                                         <div class="flex items-center gap-3">
-                                            <div
-                                                class="p-2 bg-gray-100 dark:bg-dark-bg rounded-lg text-gray-700 dark:text-dark-text">
+                                            <div class="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-dark-text">
                                                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                                     stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                 </svg>
                                             </div>
-                                            <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text">Full AI Output
-                                            </h3>
+                                            <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text">Full AI Output</h3>
                                         </div>
                                         <button onclick="copyRawData()"
                                             class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-sm px-4 py-2 rounded-xl border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-bold">
-                                            <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
-                                                stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                             </svg>
@@ -792,9 +763,8 @@ $cleanOutput = function ($text) {
                                         </button>
                                     </div>
                                     <div
-                                        class="bg-gray-50 dark:bg-dark-bg rounded-2xl p-8 border border-gray-200 dark:border-dark-border overflow-auto max-h-[600px] shadow-inner">
-                                        <pre id="raw-llm-output"
-                                            class="text-sm text-gray-700 dark:text-dark-muted whitespace-pre-wrap font-mono leading-relaxed">{{ $analysis->llm_output }}</pre>
+                                        class="bg-gray-50 dark:bg-dark-bg rounded-2xl p-8 border border-gray-200 dark:border-dark-border overflow-auto max-h-[600px] shadow-inner transition-colors">
+                                        <pre id="raw-llm-output" class="text-sm text-gray-700 dark:text-dark-muted whitespace-pre-wrap font-mono leading-relaxed">{{ $analysis->llm_output }}</pre>
                                     </div>
                                 </div>
 
@@ -802,8 +772,7 @@ $cleanOutput = function ($text) {
                                     <div>
                                         <div class="flex justify-between items-center mb-4">
                                             <div class="flex items-center gap-3">
-                                                <div
-                                                    class="p-2 bg-gray-100 dark:bg-dark-bg rounded-lg text-gray-700 dark:text-dark-text">
+                                                <div class="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-dark-text">
                                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                                         stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -811,13 +780,12 @@ $cleanOutput = function ($text) {
                                                             d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                     </svg>
                                                 </div>
-                                                <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text">Extracted
-                                                    Mermaid Source</h3>
+                                                <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text">Extracted Mermaid Source</h3>
                                             </div>
                                             <button onclick="copyMermaidSource()"
                                                 class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-sm px-4 py-2 rounded-xl border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-bold">
-                                                <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
-                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                                 </svg>
@@ -836,8 +804,7 @@ $cleanOutput = function ($text) {
                         <div id="content-logs-completed" class="analysis-tab-content hidden">
                             <div class="flex justify-between items-center mb-8">
                                 <div class="flex items-center gap-3">
-                                    <div
-                                        class="p-2 bg-gray-100 dark:bg-dark-bg rounded-lg text-gray-700 dark:text-dark-text">
+                                    <div class="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-dark-text">
                                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -847,8 +814,8 @@ $cleanOutput = function ($text) {
                                 </div>
                                 <button onclick="copyLogsFromCompleted()"
                                     class="bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-dark-text text-sm px-4 py-2 rounded-xl border border-gray-300 dark:border-dark-border transition flex items-center gap-2 shadow-sm font-bold">
-                                    <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none"
-                                        stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400 dark:text-dark-muted" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                     </svg>
@@ -906,7 +873,7 @@ $cleanOutput = function ($text) {
                         // Reset all tab styles
                         document.querySelectorAll('[id^="tab-"]').forEach(el => {
                             el.className =
-                                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
+                                'border-transparent text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text hover:border-gray-300 dark:hover:border-dark-border whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
                         });
 
                         // Show selected content
@@ -915,7 +882,7 @@ $cleanOutput = function ($text) {
                         const activeTab = document.getElementById('tab-' + tab);
                         if (activeTab) {
                             activeTab.className =
-                                'border-green-500 text-green-600 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors';
+                                'border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 whitespace-nowrap py-4 px-6 border-b-2 font-bold text-sm transition-all';
                         }
 
                         // Initialize or refresh diagram if diagram tab is selected
@@ -971,22 +938,24 @@ $cleanOutput = function ($text) {
                                 } = await mermaid.render('mermaid-svg-rendered', graphText);
 
                                 // Add modern styling to the SVG
-                                const isDarkMode = document.documentElement.classList.contains('dark');
+                                const isDark = document.documentElement.classList.contains('dark');
+                                const nodeColor = isDark ? '#1e293b' : '#ffffff';
+                                const textColor = isDark ? '#f8fafc' : '#334155';
+                                const strokeColor = isDark ? '#334155' : '#e2e8f0';
+                                const edgeColor = isDark ? '#475569' : '#94a3b8';
+
                                 let styledSvg = svg.replace('<style>', '<style>' +
                                     '.node rect, .node circle, .node polygon, .node path { ' +
                                     '   stroke-width: 2px !important; ' +
+                                    '   fill: ' + nodeColor + ' !important; ' +
+                                    '   stroke: ' + strokeColor + ' !important; ' +
                                     '   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05)); ' +
                                     '   rx: 8px; ry: 8px; ' +
                                     '} ' +
-                                    '.edgePath path { stroke-width: 1.5px !important; stroke: ' + (isDarkMode ? '#64748b' :
-                                        '#94a3b8') + ' !important; } ' +
-                                    '.edgeLabel { background-color: ' + (isDarkMode ? 'rgba(15, 23, 42, 0.8)' :
-                                        'rgba(255, 255, 255, 0.8)') +
-                                    ' !important; padding: 2px 4px !important; border-radius: 4px !important; } ' +
-                                    '.label { font-weight: 600 !important; color: ' + (isDarkMode ? '#f8fafc' : '#334155') +
-                                    ' !important; } ' +
-                                    '.cluster rect { fill: ' + (isDarkMode ? '#1e293b' : '#f8fafc') + ' !important; stroke: ' +
-                                    (isDarkMode ? '#334155' : '#e2e8f0') + ' !important; rx: 12px; ry: 12px; }'
+                                    '.edgePath path { stroke-width: 1.5px !important; stroke: ' + edgeColor + ' !important; } ' +
+                                    '.edgeLabel { background-color: ' + (isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)') + ' !important; padding: 2px 4px !important; border-radius: 4px !important; color: ' + textColor + ' !important; } ' +
+                                    '.label { font-weight: 600 !important; color: ' + textColor + ' !important; } ' +
+                                    '.cluster rect { fill: ' + (isDark ? '#0f172a' : '#f8fafc') + ' !important; stroke: ' + strokeColor + ' !important; rx: 12px; ry: 12px; }'
                                 );
 
                                 output.innerHTML = styledSvg;
@@ -994,7 +963,7 @@ $cleanOutput = function ($text) {
                                 setTimeout(initPanZoom, 100);
                             } catch (error) {
                                 console.error('Mermaid render error:', error);
-                                output.innerHTML = '<div class="text-red-500 p-4 bg-red-50 rounded-lg border border-red-100">' +
+                                output.innerHTML = '<div class="text-red-500 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/30">' +
                                     '<p class="font-bold">Failed to render flowchart.</p>' +
                                     '<p class="text-sm mt-1">The AI generated an invalid diagram format. Try clicking "Re-generate" to fix it.</p>' +
                                     '</div>';
@@ -1068,10 +1037,10 @@ $cleanOutput = function ($text) {
                         const container = document.getElementById('diagram-container');
                         if (document.fullscreenElement) {
                             container.style.height = '100vh';
-                            container.classList.add('bg-white');
+                            container.classList.add('bg-white', 'dark:bg-dark-bg');
                         } else {
-                            container.style.height = '500px';
-                            container.classList.remove('bg-white');
+                            container.style.height = '600px';
+                            container.classList.remove('bg-white', 'dark:bg-dark-bg');
                         }
                         if (panZoomInstance) {
                             panZoomInstance.resize();
