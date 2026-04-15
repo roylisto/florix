@@ -48,7 +48,7 @@ class ProjectController extends Controller
             $zipPath = $fullPath;
         }
 
-        AnalyzeRepositoryJob::dispatch($project, $analysis, $zipPath, $request->local_path);
+        AnalyzeRepositoryJob::dispatch($project, $analysis, $zipPath);
 
         return redirect()->route('projects.show', $project);
     }
@@ -83,40 +83,25 @@ class ProjectController extends Controller
             'zip_path' => $analysis->zip_path,
         ]);
 
-        AnalyzeRepositoryJob::dispatch($project, $newAnalysis, $analysis->zip_path, $project->repo_path);
+        AnalyzeRepositoryJob::dispatch($project, $newAnalysis, $analysis->zip_path);
 
         return redirect()->route('projects.show', $project);
     }
 
-    public function regenerate(Project $requestProject, \Illuminate\Http\Request $request)
+    public function regenerate(Project $project)
     {
-        $project = $requestProject;
         $analysis = $project->latestAnalysis;
         if (!$analysis || $analysis->status !== 'completed') {
             return back()->with('error', 'No completed analysis to re-generate.');
         }
 
-        $targets = $request->input('targets', ['all']);
-
-        $newAnalysisData = [
+        $newAnalysis = Analysis::create([
             'project_id' => $project->id,
             'status' => 'pending',
-            'parsed_data' => $analysis->parsed_data,
-            'file_summaries' => $analysis->file_summaries,
             'extracted_path' => $analysis->extracted_path,
-        ];
+        ]);
 
-        // If not regenerating all, copy existing content for non-target sections
-        if (!in_array('all', $targets)) {
-            if (!in_array('features', $targets)) $newAnalysisData['features_content'] = $analysis->features_content;
-            if (!in_array('ui', $targets)) $newAnalysisData['ui_content'] = $analysis->ui_content;
-            if (!in_array('flow', $targets)) $newAnalysisData['flow_content'] = $analysis->flow_content;
-            if (!in_array('mermaid', $targets)) $newAnalysisData['mermaid_content'] = $analysis->mermaid_content;
-        }
-
-        $newAnalysis = Analysis::create($newAnalysisData);
-
-        AnalyzeRepositoryJob::dispatch($project, $newAnalysis, null, $project->repo_path, $targets);
+        AnalyzeRepositoryJob::dispatch($project, $newAnalysis, null, ['all']);
 
         return redirect()->route('projects.show', $project);
     }
@@ -135,7 +120,7 @@ class ProjectController extends Controller
             'error' => null
         ]);
 
-        AnalyzeRepositoryJob::dispatch($project, $analysis, $analysis->zip_path, $project->repo_path);
+        AnalyzeRepositoryJob::dispatch($project, $analysis, $analysis->zip_path);
 
         return redirect()->route('projects.show', $project);
     }

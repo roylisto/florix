@@ -20,8 +20,14 @@ class LLMService
      */
     public function generate(string $prompt, ?callable $onProgress = null, array $options = []): string
     {
-        $url = config('services.ollama.url', 'http://localhost:11434/api/generate');
-        $model = config('services.ollama.model', 'phi3');
+        $ollamaUrl = config('services.ollama.url');
+        $model = config('services.ollama.model');
+
+        // Ensure we have the correct endpoint
+        $url = \Illuminate\Support\Str::finish($ollamaUrl, '/') . 'api/generate';
+        if (\Illuminate\Support\Str::contains($ollamaUrl, '/api/generate')) {
+            $url = $ollamaUrl;
+        }
 
         if (config('services.ollama.mock', false)) {
             Log::info('LLMService: Using MOCK response');

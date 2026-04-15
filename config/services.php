@@ -36,9 +36,9 @@ return [
     ],
 
     'ollama' => [
-        'url' => env('OLLAMA_URL', 'http://localhost:11434/api/generate'),
+        'url' => env('OLLAMA_URL', 'http://localhost:11434'),
         'model' => env('OLLAMA_MODEL', 'phi3'),
-        'mock' => env('OLLAMA_MOCK', false), 
+        'mock' => env('OLLAMA_MOCK', false),
     ],
 
 ];

@@ -39,7 +39,8 @@
                     class="bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden">
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-4">
-                            <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
+                            <div
+                                class="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -49,18 +50,32 @@
                                 $latestAnalysis = $project->analyses()->latest()->first();
                                 $status = $latestAnalysis?->status ?? 'no_analysis';
                                 $statusColor = match ($status) {
-                                    'completed' => 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20',
-                                    'processing', 'generating_explanation' => 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20',
+                                    'completed'
+                                        => 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20',
+                                    'processing',
+                                    'generating_explanation'
+                                        => 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20',
                                     'failed' => 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20',
                                     default => 'text-gray-500 dark:text-dark-muted bg-gray-50 dark:bg-dark-bg',
                                 };
                             @endphp
-                            <span
-                                class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full {{ $statusColor }}">
-                                {{ str_replace('_', ' ', $status) }}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full {{ $statusColor }}">
+                                    {{ str_replace('_', ' ', $status) }}
+                                </span>
+                                <button type="button"
+                                    onclick="openDeleteModal('{{ route('projects.destroy', $project) }}')"
+                                    class="text-gray-400 hover:text-red-500 transition-colors" title="Delete Project">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text mb-2 group-hover:text-green-600 dark:group-hover:text-green-500 transition-colors">
+                        <h3
+                            class="text-xl font-bold text-gray-900 dark:text-dark-text mb-2 group-hover:text-green-600 dark:group-hover:text-green-500 transition-colors">
                             {{ $project->name }}</h3>
                         <p class="text-sm text-gray-500 dark:text-dark-muted line-clamp-2 mb-6 h-10">
                             {{ $latestAnalysis?->progress_message ?? 'Last analyzed ' . ($latestAnalysis?->updated_at?->diffForHumans() ?? 'never') }}
@@ -82,15 +97,19 @@
                     </div>
                 </div>
             @empty
-                <div class="col-span-full py-20 text-center bg-white dark:bg-dark-card rounded-3xl border-2 border-dashed border-gray-200 dark:border-dark-border transition-colors">
-                    <div class="bg-gray-50 dark:bg-dark-bg w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 transition-colors">
-                        <svg class="w-10 h-10 text-gray-300 dark:text-dark-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div
+                    class="col-span-full py-20 text-center bg-white dark:bg-dark-card rounded-3xl border-2 border-dashed border-gray-200 dark:border-dark-border transition-colors">
+                    <div
+                        class="bg-gray-50 dark:bg-dark-bg w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 transition-colors">
+                        <svg class="w-10 h-10 text-gray-300 dark:text-dark-muted" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                         </svg>
                     </div>
                     <h3 class="text-xl font-bold text-gray-900 dark:text-dark-text mb-2">No projects yet</h3>
-                    <p class="text-gray-500 dark:text-dark-muted mb-8">Upload a repository to get your first business explanation.</p>
+                    <p class="text-gray-500 dark:text-dark-muted mb-8">Upload a repository to get your first business
+                        explanation.</p>
                     <button onclick="document.getElementById('upload-modal').classList.remove('hidden')"
                         class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl inline-flex items-center gap-2">
                         Create Your First Project
@@ -104,8 +123,8 @@
     <div id="upload-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
         aria-modal="true">
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-500/75 dark:bg-dark-bg/80 backdrop-blur-sm transition-opacity" aria-hidden="true"
-                onclick="document.getElementById('upload-modal').classList.add('hidden')"></div>
+            <div class="fixed inset-0 bg-gray-500/75 dark:bg-dark-bg/80 backdrop-blur-sm transition-opacity"
+                aria-hidden="true" onclick="document.getElementById('upload-modal').classList.add('hidden')"></div>
 
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
@@ -115,7 +134,8 @@
                     @csrf
                     <div class="px-8 pt-8 pb-6">
                         <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-2xl font-bold text-gray-900 dark:text-dark-text" id="modal-title">New Analysis</h3>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-dark-text" id="modal-title">New Analysis
+                            </h3>
                             <button type="button" onclick="document.getElementById('upload-modal').classList.add('hidden')"
                                 class="text-gray-400 dark:text-dark-muted hover:text-gray-500 dark:hover:text-dark-text transition-colors">
                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +147,8 @@
 
                         <div class="space-y-6">
                             <div>
-                                <label for="name" class="block text-sm font-bold text-gray-700 dark:text-dark-text mb-2">Project
+                                <label for="name"
+                                    class="block text-sm font-bold text-gray-700 dark:text-dark-text mb-2">Project
                                     Name</label>
                                 <input type="text" name="name" id="name" required
                                     class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none"
@@ -135,14 +156,16 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 dark:text-dark-text mb-2">Repository Files
+                                <label class="block text-sm font-bold text-gray-700 dark:text-dark-text mb-2">Repository
+                                    Files
                                     (.zip)</label>
-                                <div id="drop-zone"
+                                <div id="drop-zone" onclick="document.getElementById('zip_file').click()"
                                     class="mt-1 flex justify-center px-6 pt-10 pb-10 border-2 border-gray-200 dark:border-dark-border border-dashed rounded-2xl hover:border-green-400 dark:hover:border-green-500 transition-all bg-gray-50/50 dark:bg-dark-bg/50 group cursor-pointer relative">
                                     <div class="space-y-2 text-center">
                                         <div
                                             class="mx-auto h-16 w-16 text-gray-400 dark:text-dark-muted group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors bg-white dark:bg-dark-card rounded-full flex items-center justify-center shadow-sm">
-                                            <svg class="h-8 w-8" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                            <svg class="h-8 w-8" stroke="currentColor" fill="none"
+                                                viewBox="0 0 48 48">
                                                 <path
                                                     d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -158,14 +181,16 @@
                                             <p class="pl-1">or drag and drop</p>
                                         </div>
                                         <p class="text-xs text-gray-400 dark:text-dark-muted">ZIP files up to 50MB</p>
-                                        <p id="file-name-display" class="text-sm font-bold text-green-600 dark:text-green-400 mt-2 hidden"></p>
+                                        <p id="file-name-display"
+                                            class="text-sm font-bold text-green-600 dark:text-green-400 mt-2 hidden"></p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="px-8 py-6 bg-gray-50 dark:bg-dark-bg/50 border-t border-gray-100 dark:border-dark-border flex flex-col sm:flex-row gap-3 transition-colors">
+                    <div
+                        class="px-8 py-6 bg-gray-50 dark:bg-dark-bg/50 border-t border-gray-100 dark:border-dark-border flex flex-col sm:flex-row gap-3 transition-colors">
                         <button type="submit"
                             class="w-full sm:flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl">
                             Start Analysis
@@ -219,5 +244,58 @@
             fileInput.files = files;
             handleFileSelect(fileInput);
         }, false);
+
+        // Modal Logic
+        function openDeleteModal(url) {
+            const modal = document.getElementById('delete-modal');
+            const form = document.getElementById('delete-form');
+            form.action = url;
+            modal.classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.add('hidden');
+        }
     </script>
+
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500/75 dark:bg-dark-bg/80 backdrop-blur-sm transition-opacity"
+                aria-hidden="true" onclick="closeDeleteModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-middle bg-white dark:bg-dark-card rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100 dark:border-dark-border transition-colors">
+                <div class="px-8 pt-8 pb-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-dark-text">Delete Project?</h3>
+                    </div>
+                    <p class="text-gray-600 dark:text-dark-muted">This action cannot be undone. All project data and AI
+                        analyses will be permanently removed.</p>
+                </div>
+                <div
+                    class="px-8 py-6 bg-gray-50 dark:bg-dark-bg/50 border-t border-gray-100 dark:border-dark-border flex flex-col sm:flex-row gap-3 transition-colors">
+                    <form id="delete-form" method="POST" class="sm:flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl">
+                            Delete Permanently
+                        </button>
+                    </form>
+                    <button type="button" onclick="closeDeleteModal()"
+                        class="w-full sm:w-auto px-6 py-3.5 text-sm font-bold text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all border border-gray-200 dark:border-dark-border">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection

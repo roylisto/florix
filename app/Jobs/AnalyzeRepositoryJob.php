@@ -119,6 +119,7 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 $this->logStep('Generating Mermaid Flowchart...');
                 $mermaid = $this->generateSection($fileSummaries, 'DIAGRAM');
                 $this->analysis->update(['mermaid_content' => $mermaid]);
+                $this->logStep('Mermaid Flowchart generated (Length: ' . strlen($mermaid) . ' chars).');
             }
 
             // Step 4: Finalize
@@ -256,8 +257,17 @@ class AnalyzeRepositoryJob implements ShouldQueue
             // Log the prompt for debugging (truncated)
             $this->analysis->update(['prompt' => Str::limit($prompt, 1000)]);
 
-            $response = Http::timeout(300)->post('http://localhost:11434/api/generate', [
-                'model' => 'llama3.2',
+            $ollamaUrl = config('services.ollama.url');
+            $ollamaModel = config('services.ollama.model');
+
+            // Ensure we have the correct endpoint
+            $endpoint = Str::finish($ollamaUrl, '/') . 'api/generate';
+            if (Str::contains($ollamaUrl, '/api/generate')) {
+                $endpoint = $ollamaUrl;
+            }
+
+            $response = Http::timeout(300)->post($endpoint, [
+                'model' => $ollamaModel,
                 'prompt' => $prompt,
                 'stream' => false,
             ]);
@@ -266,7 +276,15 @@ class AnalyzeRepositoryJob implements ShouldQueue
                 return $response->json()['response'] ?? 'No response from AI.';
             }
 
+            if ($response->status() === 404) {
+                throw new \Exception("Ollama model '" . $ollamaModel . "' not found. Please run 'ollama pull " . $ollamaModel . "' in your terminal.");
+            }
+
             throw new \Exception("Ollama API failed with status: " . $response->status());
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            $msg = "Could not connect to Ollama server. Please make sure Ollama is running at " . config('services.ollama.url') . ". Error: " . $e->getMessage();
+            Log::error("Ollama Connection Failed: " . $msg);
+            return "AI Analysis Error: " . $msg;
         } catch (\Exception $e) {
             Log::error("Ollama Call Failed: " . $e->getMessage());
             return "AI Analysis Error: " . $e->getMessage();
